@@ -24,7 +24,7 @@ function getFlowSteps(activityType: "wheel" | "card" | null): FlowStep[] {
 function stepLabel(step: FlowStep): string {
   switch (step) {
     case "type":
-      return "Etkinlik türü";
+      return "Tür";
     case "display":
       return "Görünüm";
     case "theme":
@@ -126,6 +126,13 @@ export default function CreateActivityPage() {
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
+
+      const contentType = res.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        const text = await res.text();
+        throw new Error(text || "Sunucu geçersiz yanıt döndürdü");
+      }
+
       const data = (await res.json()) as { url?: string; error?: string };
       if (!res.ok) {
         throw new Error(data.error || "Yükleme başarısız");
@@ -208,149 +215,187 @@ export default function CreateActivityPage() {
   const selectedTheme = themes.find((t) => t.id === selectedThemeId);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-zinc-100/50 text-zinc-900">
-      <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-4 pb-28 pt-6 sm:px-8 sm:pb-24 sm:pt-8">
-        <header className="mb-6 flex shrink-0 items-center gap-4 sm:mb-8">
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Background */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-indigo-50/30" />
+        <div className="absolute left-[-20%] top-[10%] h-[500px] w-[500px] rounded-full bg-indigo-50/50 blur-3xl" />
+        <div className="absolute bottom-[0%] right-[-10%] h-[400px] w-[400px] rounded-full bg-purple-50/50 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-32 pt-6 sm:px-6 sm:pb-28 sm:pt-8">
+        {/* Header */}
+        <header className="animate-fade-in mb-8 flex shrink-0 items-center gap-4">
           {currentStep === "type" ? (
             <Link
               href="/"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white text-base font-semibold text-zinc-600 shadow-sm ring-1 ring-zinc-200 transition hover:bg-zinc-50 active:bg-zinc-100"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-sm text-slate-500 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 hover:text-slate-700"
             >
-              ←
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
             </Link>
           ) : (
             <button
               type="button"
               onClick={goBack}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white text-base font-semibold text-zinc-600 shadow-sm ring-1 ring-zinc-200 transition hover:bg-zinc-50 active:bg-zinc-100"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-sm text-slate-500 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 hover:text-slate-700"
             >
-              ←
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
             </button>
           )}
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
-              Etkinlik oluştur
+            <h1 className="text-lg font-bold tracking-tight text-slate-800 sm:text-xl">
+              Yeni Etkinlik
             </h1>
-            <p className="mt-0.5 text-sm text-zinc-400">
-              {stepLabel(currentStep)} · Adım {stepIndex + 1} / {totalSteps}
-            </p>
+          </div>
+          <div className="text-xs font-semibold text-slate-400">
+            {stepIndex + 1}/{totalSteps}
           </div>
         </header>
 
-        <div
-          className="mx-auto mb-8 flex w-full max-w-xs items-center justify-center gap-2 sm:mb-10"
-          role="progressbar"
-          aria-valuenow={stepIndex + 1}
-          aria-valuemin={1}
-          aria-valuemax={totalSteps}
-          aria-label="İlerleme"
-        >
-          {flowSteps.map((s, i) => (
-            <span
-              key={s + i}
-              className={`h-2 flex-1 rounded-full transition-all duration-300 ${
-                i === stepIndex
-                  ? "bg-indigo-600 shadow-sm shadow-indigo-200"
-                  : i < stepIndex
-                    ? "bg-indigo-300"
-                    : "bg-zinc-200"
-              }`}
-              title={stepLabel(s)}
-            />
-          ))}
+        {/* Progress Bar */}
+        <div className="animate-fade-in mb-10 sm:mb-12">
+          <div className="flex gap-1.5">
+            {flowSteps.map((s, i) => (
+              <div key={s + i} className="flex-1" title={stepLabel(s)}>
+                <div
+                  className={`h-1 rounded-full transition-all duration-500 ${
+                    i <= stepIndex ? "bg-indigo-500" : "bg-slate-200"
+                  }`}
+                />
+                <p
+                  className={`mt-1.5 text-center text-[10px] font-semibold transition-colors ${
+                    i === stepIndex ? "text-indigo-600" : "text-slate-300"
+                  }`}
+                >
+                  {stepLabel(s)}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
 
+        {/* Steps */}
         <main className="flex-1">
+          {/* Step: Type */}
           {currentStep === "type" && (
-            <section className="space-y-6" aria-labelledby="step-type-heading">
+            <section className="animate-slide-up space-y-6" aria-labelledby="step-type-heading">
               <h2 id="step-type-heading" className="sr-only">
                 Etkinlik türü seçin
               </h2>
-              <p className="text-center text-base text-zinc-500 sm:text-lg">
-                Hangi etkinlik türünü kullanmak istersiniz?
-              </p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-slate-800 sm:text-3xl">
+                  Ne oluşturmak istersiniz?
+                </h3>
+                <p className="mt-2 text-sm text-slate-400">
+                  Bir etkinlik türü seçin
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-2">
                 <button
                   type="button"
                   onClick={() => selectType("wheel")}
-                  className="flex aspect-square flex-col items-center justify-center gap-3 rounded-3xl border-2 border-transparent bg-white p-6 text-center shadow-md ring-1 ring-zinc-200 transition hover:ring-indigo-300 hover:shadow-lg active:scale-[0.97]"
+                  className="card-hover group flex flex-col items-center justify-center gap-4 rounded-3xl border border-slate-200/80 bg-white p-6 py-10 text-center shadow-sm"
                 >
-                  <span className="text-5xl sm:text-6xl" aria-hidden>
+                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50 text-5xl shadow-inner transition-transform duration-300 group-hover:scale-110">
                     🎡
-                  </span>
-                  <span className="text-lg font-bold sm:text-xl">Çark</span>
-                  <span className="text-xs text-zinc-400 sm:text-sm">
-                    Rastgele seçim çarkı
-                  </span>
+                  </div>
+                  <div>
+                    <span className="text-lg font-bold text-slate-800">Çark</span>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Rastgele seçim çarkı
+                    </p>
+                  </div>
                 </button>
                 <button
                   type="button"
                   onClick={() => selectType("card")}
-                  className="flex aspect-square flex-col items-center justify-center gap-3 rounded-3xl border-2 border-transparent bg-white p-6 text-center shadow-md ring-1 ring-zinc-200 transition hover:ring-indigo-300 hover:shadow-lg active:scale-[0.97]"
+                  className="card-hover group flex flex-col items-center justify-center gap-4 rounded-3xl border border-slate-200/80 bg-white p-6 py-10 text-center shadow-sm"
                 >
-                  <span className="text-5xl sm:text-6xl" aria-hidden>
+                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-50 text-5xl shadow-inner transition-transform duration-300 group-hover:scale-110">
                     🃏
-                  </span>
-                  <span className="text-lg font-bold sm:text-xl">
-                    Kart Açma
-                  </span>
-                  <span className="text-xs text-zinc-400 sm:text-sm">
-                    Kartları çevirerek keşfet
-                  </span>
+                  </div>
+                  <div>
+                    <span className="text-lg font-bold text-slate-800">Kart Açma</span>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Kartları çevirerek keşfet
+                    </p>
+                  </div>
                 </button>
               </div>
             </section>
           )}
 
+          {/* Step: Display */}
           {currentStep === "display" && (
-            <section
-              className="space-y-6"
-              aria-labelledby="step-display-heading"
-            >
+            <section className="animate-slide-up space-y-6" aria-labelledby="step-display-heading">
               <h2 id="step-display-heading" className="sr-only">
                 Görünüm modu
               </h2>
-              <p className="text-center text-base text-zinc-500 sm:text-lg">
-                Kartların nasıl dizileceğini seçin.
-              </p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-slate-800 sm:text-3xl">
+                  Kartlar nasıl görünsün?
+                </h3>
+                <p className="mt-2 text-sm text-slate-400">
+                  Bir görünüm modu seçin
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-2">
                 <button
                   type="button"
                   onClick={() => confirmDisplayMode("grid")}
-                  className="flex aspect-square flex-col items-center justify-center gap-3 rounded-3xl bg-white p-6 shadow-md ring-1 ring-zinc-200 transition hover:ring-indigo-300 hover:shadow-lg active:scale-[0.97]"
+                  className="card-hover group flex flex-col items-center justify-center gap-4 rounded-3xl border border-slate-200/80 bg-white p-6 py-10 text-center shadow-sm"
                 >
-                  <span className="text-4xl sm:text-5xl" aria-hidden>
-                    ⊞
-                  </span>
-                  <span className="text-lg font-bold">Izgara Modu</span>
-                  <span className="text-xs text-zinc-400 sm:text-sm">3×3 ızgara düzeni</span>
+                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-50 to-teal-50 shadow-inner transition-transform duration-300 group-hover:scale-110">
+                    <div className="grid grid-cols-3 gap-1">
+                      {Array.from({ length: 9 }).map((_, i) => (
+                        <div key={i} className="h-3 w-3 rounded-sm bg-emerald-300/80" />
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-lg font-bold text-slate-800">Izgara</span>
+                    <p className="mt-1 text-xs text-slate-400">3x3 ızgara düzeni</p>
+                  </div>
                 </button>
                 <button
                   type="button"
                   onClick={() => confirmDisplayMode("stack")}
-                  className="flex aspect-square flex-col items-center justify-center gap-3 rounded-3xl bg-white p-6 shadow-md ring-1 ring-zinc-200 transition hover:ring-indigo-300 hover:shadow-lg active:scale-[0.97]"
+                  className="card-hover group flex flex-col items-center justify-center gap-4 rounded-3xl border border-slate-200/80 bg-white p-6 py-10 text-center shadow-sm"
                 >
-                  <span className="text-4xl sm:text-5xl" aria-hidden>
-                    ▤
-                  </span>
-                  <span className="text-lg font-bold">Sıralı Mod</span>
-                  <span className="text-xs text-zinc-400 sm:text-sm">
-                    Kartlar sırayla açılır
-                  </span>
+                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-50 to-purple-50 shadow-inner transition-transform duration-300 group-hover:scale-110">
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="h-6 w-10 rounded-md border-2 border-violet-300/80 bg-violet-100/50" />
+                      <div className="h-6 w-10 -translate-y-3 rounded-md border-2 border-violet-400/80 bg-violet-200/50" />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-lg font-bold text-slate-800">Sıralı</span>
+                    <p className="mt-1 text-xs text-slate-400">Kartlar sırayla açılır</p>
+                  </div>
                 </button>
               </div>
             </section>
           )}
 
+          {/* Step: Theme */}
           {currentStep === "theme" && (
-            <section className="space-y-6" aria-labelledby="step-theme-heading">
+            <section className="animate-slide-up space-y-6" aria-labelledby="step-theme-heading">
               <h2 id="step-theme-heading" className="sr-only">
                 Tema seçin
               </h2>
-              <p className="text-center text-base text-zinc-500 sm:text-lg">
-                Bir tema seçin; renkler ve görseller buna göre ayarlanır.
-              </p>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-slate-800 sm:text-3xl">
+                  Bir tema seçin
+                </h3>
+                <p className="mt-2 text-sm text-slate-400">
+                  Renkler ve görseller buna göre ayarlanır
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 pt-2 sm:grid-cols-3">
                 {themes.map((theme) => {
                   const selected = selectedThemeId === theme.id;
                   return (
@@ -358,27 +403,29 @@ export default function CreateActivityPage() {
                       key={theme.id}
                       type="button"
                       onClick={() => setSelectedThemeId(theme.id)}
-                      className={`flex flex-col overflow-hidden rounded-2xl bg-white text-left shadow-md ring-2 transition-all duration-200 active:scale-[0.97] ${
+                      className={`flex flex-col overflow-hidden rounded-2xl border-2 bg-white text-left shadow-sm transition-all duration-200 active:scale-[0.97] ${
                         selected
-                          ? "ring-indigo-600 shadow-indigo-100"
-                          : "ring-zinc-200 hover:ring-indigo-300"
+                          ? "border-indigo-500 shadow-md shadow-indigo-100 ring-2 ring-indigo-500/20"
+                          : "border-transparent ring-1 ring-slate-200/80 hover:ring-slate-300"
                       }`}
                     >
                       <div
-                        className="flex items-center gap-2 px-3 pb-2 pt-3 sm:px-4 sm:pt-4"
+                        className="flex items-center gap-2.5 px-3.5 py-3 sm:px-4"
                         style={{ backgroundColor: theme.backgroundColor }}
                       >
-                        <span className="text-2xl sm:text-3xl" aria-hidden>
+                        <span className="text-2xl" aria-hidden>
                           {theme.emoji}
                         </span>
-                        <span className="min-w-0 flex-1 text-sm font-bold leading-tight sm:text-base">
+                        <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-slate-700">
                           {theme.name}
                         </span>
+                        {selected && (
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-500 text-[10px] text-white">
+                            ✓
+                          </span>
+                        )}
                       </div>
-                      <div
-                        className="flex h-3 w-full sm:h-4"
-                        role="presentation"
-                      >
+                      <div className="flex h-2 w-full" role="presentation">
                         {theme.cardColors.map((c, i) => (
                           <div
                             key={i}
@@ -391,31 +438,37 @@ export default function CreateActivityPage() {
                   );
                 })}
               </div>
-              <div className="pt-4">
-                <button
-                  type="button"
-                  disabled={!selectedThemeId}
-                  onClick={goNextFromTheme}
-                  className="flex min-h-14 w-full items-center justify-center rounded-2xl bg-indigo-600 text-lg font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:shadow-none active:bg-indigo-800"
-                >
-                  Devam →
-                </button>
-              </div>
+              <button
+                type="button"
+                disabled={!selectedThemeId}
+                onClick={goNextFromTheme}
+                className="btn-primary mt-4 flex min-h-[52px] w-full items-center justify-center rounded-2xl text-base font-bold text-white shadow-lg shadow-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                style={!selectedThemeId ? { background: "#d1d5db" } : undefined}
+              >
+                Devam
+              </button>
             </section>
           )}
 
+          {/* Step: Content */}
           {currentStep === "content" && (
-            <section
-              className="space-y-6"
-              aria-labelledby="step-content-heading"
-            >
+            <section className="animate-slide-up space-y-6" aria-labelledby="step-content-heading">
               <h2 id="step-content-heading" className="sr-only">
                 İçerik ekle
               </h2>
-              <div>
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-slate-800 sm:text-3xl">
+                  İçeriği hazırlayın
+                </h3>
+                <p className="mt-2 text-sm text-slate-400">
+                  Etkinliğe ad verin ve seçenekleri ekleyin
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
                 <label
                   htmlFor="activity-title"
-                  className="mb-2 block text-sm font-semibold text-zinc-600"
+                  className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400"
                 >
                   Etkinlik adı
                 </label>
@@ -425,35 +478,37 @@ export default function CreateActivityPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Örn. Haftanın kelimeleri"
-                  className="min-h-14 w-full rounded-2xl border-2 border-zinc-200 bg-white px-4 text-lg outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-base font-medium text-slate-800 placeholder:text-slate-300 focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-100"
                 />
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-baseline justify-between">
-                  <p className="text-sm font-semibold text-zinc-600">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                     Seçenekler
                   </p>
-                  <p className="text-xs text-zinc-400">
-                    Her satırda yazı veya görsel olmalıdır
+                  <p className="text-[11px] text-slate-300">
+                    {options.filter((o) => o.text.trim() || o.imageUrl).length} eklendi
                   </p>
                 </div>
                 {options.map((opt, idx) => (
                   <div
                     key={opt.id}
-                    className="rounded-2xl bg-white p-4 shadow-md ring-1 ring-zinc-200"
+                    className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm"
                   >
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-zinc-500">
-                        Seçenek {idx + 1}
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-400">
+                        {idx + 1}
                       </span>
                       <button
                         type="button"
                         onClick={() => removeOption(opt.id)}
-                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-red-50 text-lg font-bold text-red-600 ring-1 ring-red-100 active:bg-red-100"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition hover:bg-red-50 hover:text-red-500"
                         aria-label="Seçeneği kaldır"
                       >
-                        ×
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                       </button>
                     </div>
                     <label className="sr-only" htmlFor={`opt-text-${opt.id}`}>
@@ -466,11 +521,11 @@ export default function CreateActivityPage() {
                       onChange={(e) =>
                         updateOptionText(opt.id, e.target.value)
                       }
-                      placeholder="Yazı ekle"
-                      className="mb-3 min-h-12 w-full rounded-xl border-2 border-zinc-200 bg-zinc-50 px-3 text-base outline-none focus:border-indigo-500"
+                      placeholder="Yazı ekle..."
+                      className="mb-3 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-700 placeholder:text-slate-300 focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-100"
                     />
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                      <label className="inline-flex cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <label className="cursor-pointer">
                         <input
                           type="file"
                           accept="image/*"
@@ -482,14 +537,15 @@ export default function CreateActivityPage() {
                             void onPickImage(opt.id, f ?? null);
                           }}
                         />
-                        <span className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl bg-zinc-100 px-4 text-base font-semibold text-zinc-800 ring-1 ring-zinc-200 active:bg-zinc-200 sm:flex-none">
-                          {uploadingIds.has(opt.id)
-                            ? "Yükleniyor…"
-                            : "Görsel ekle"}
+                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500 transition hover:border-slate-300 hover:bg-slate-100">
+                          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {uploadingIds.has(opt.id) ? "Yükleniyor..." : "Görsel"}
                         </span>
                       </label>
                       {opt.imageUrl && (
-                        <div className="relative h-24 w-full overflow-hidden rounded-xl bg-zinc-100 sm:h-20 sm:w-32">
+                        <div className="h-12 w-16 overflow-hidden rounded-lg bg-slate-100">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={opt.imageUrl}
@@ -500,8 +556,8 @@ export default function CreateActivityPage() {
                       )}
                     </div>
                     {opt.text.trim().length === 0 && !opt.imageUrl && (
-                      <p className="mt-2 text-sm text-amber-700">
-                        Yazı veya görsel ekleyin.
+                      <p className="mt-2 text-xs text-amber-500">
+                        Yazı veya görsel ekleyin
                       </p>
                     )}
                   </div>
@@ -511,126 +567,126 @@ export default function CreateActivityPage() {
               <button
                 type="button"
                 onClick={addOption}
-                className="flex min-h-14 w-full items-center justify-center rounded-2xl border-2 border-dashed border-indigo-300 bg-indigo-50/50 text-base font-semibold text-indigo-700 transition hover:border-indigo-400 hover:bg-indigo-50 active:bg-indigo-100"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-white/50 py-4 text-sm font-semibold text-slate-400 transition hover:border-indigo-300 hover:bg-indigo-50/30 hover:text-indigo-500"
               >
-                + Seçenek ekle
+                <span className="text-lg">+</span>
+                Seçenek ekle
               </button>
 
               {!contentValid && hasAtLeastOneOption && (
-                <p className="rounded-xl bg-amber-50 px-4 py-3 text-center text-sm text-amber-700 ring-1 ring-amber-100">
-                  Tüm seçeneklerde yazı veya görsel olmalı; boş satırları
-                  silin veya doldurun.
-                </p>
+                <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-center text-xs font-medium text-amber-600">
+                  Tüm seçeneklerde yazı veya görsel olmalı
+                </div>
               )}
               {!hasAtLeastOneOption && (
-                <p className="rounded-xl bg-amber-50 px-4 py-3 text-center text-sm text-amber-700 ring-1 ring-amber-100">
-                  En az bir seçenek için yazı veya görsel ekleyin.
-                </p>
+                <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-center text-xs font-medium text-amber-600">
+                  En az bir seçenek ekleyin
+                </div>
               )}
 
               <button
                 type="button"
                 disabled={!contentValid || !hasAtLeastOneOption}
                 onClick={goNextFromContent}
-                className="flex min-h-14 w-full items-center justify-center rounded-2xl bg-indigo-600 text-lg font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:shadow-none active:bg-indigo-800"
+                className="btn-primary flex min-h-[52px] w-full items-center justify-center rounded-2xl text-base font-bold text-white shadow-lg shadow-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                style={!contentValid || !hasAtLeastOneOption ? { background: "#d1d5db" } : undefined}
               >
-                Önizlemeye geç →
+                Önizleme
               </button>
             </section>
           )}
 
+          {/* Step: Preview */}
           {currentStep === "preview" && (
-            <section
-              className="space-y-6"
-              aria-labelledby="step-preview-heading"
-            >
+            <section className="animate-slide-up space-y-6" aria-labelledby="step-preview-heading">
               <h2 id="step-preview-heading" className="sr-only">
                 Önizleme ve kaydet
               </h2>
-              <div className="rounded-3xl bg-white p-6 shadow-md ring-1 ring-zinc-200 sm:p-8">
-                <h3 className="mb-5 text-lg font-bold text-zinc-800">
-                  Özet
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-slate-800 sm:text-3xl">
+                  Her şey hazır!
                 </h3>
-                <dl className="space-y-3 text-base">
-                  <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
-                    <dt className="font-medium text-zinc-500">Etkinlik adı</dt>
-                    <dd className="font-semibold text-zinc-900">
+                <p className="mt-2 text-sm text-slate-400">
+                  Kontrol edin ve kaydedin
+                </p>
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+                <div className="divide-y divide-slate-100">
+                  <div className="flex items-center justify-between px-5 py-4">
+                    <span className="text-sm text-slate-400">Etkinlik adı</span>
+                    <span className="text-sm font-semibold text-slate-800">
                       {title.trim() || "Adsız etkinlik"}
-                    </dd>
+                    </span>
                   </div>
-                  <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
-                    <dt className="font-medium text-zinc-500">Tür</dt>
-                    <dd className="font-semibold text-zinc-900">
-                      {activityType === "wheel" ? "Çark" : "Kart açma"}
-                    </dd>
+                  <div className="flex items-center justify-between px-5 py-4">
+                    <span className="text-sm text-slate-400">Tür</span>
+                    <span className="text-sm font-semibold text-slate-800">
+                      {activityType === "wheel" ? "🎡 Çark" : "🃏 Kart açma"}
+                    </span>
                   </div>
                   {activityType === "card" && displayMode && (
-                    <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
-                      <dt className="font-medium text-zinc-500">Görünüm</dt>
-                      <dd className="font-semibold text-zinc-900">
-                        {displayMode === "grid"
-                          ? "Izgara modu (3×3)"
-                          : "Sıralı mod"}
-                      </dd>
+                    <div className="flex items-center justify-between px-5 py-4">
+                      <span className="text-sm text-slate-400">Görünüm</span>
+                      <span className="text-sm font-semibold text-slate-800">
+                        {displayMode === "grid" ? "Izgara (3x3)" : "Sıralı"}
+                      </span>
                     </div>
                   )}
-                  <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
-                    <dt className="font-medium text-zinc-500">Tema</dt>
-                    <dd className="flex items-center gap-2 font-semibold text-zinc-900">
+                  <div className="flex items-center justify-between px-5 py-4">
+                    <span className="text-sm text-slate-400">Tema</span>
+                    <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                       {selectedTheme && (
                         <>
-                          <span>{selectedTheme.emoji}</span>
-                          <span>{selectedTheme.name}</span>
+                          {selectedTheme.emoji} {selectedTheme.name}
                         </>
                       )}
-                    </dd>
+                    </span>
                   </div>
-                  <div>
-                    <dt className="mb-2 font-medium text-zinc-500">
-                      Seçenekler (
-                      {
-                        options.filter(
-                          (o) =>
-                            o.text.trim().length > 0 || Boolean(o.imageUrl)
-                        ).length
-                      }
-                      )
-                    </dt>
-                    <dd>
-                      <ul className="list-inside list-disc space-y-1 text-zinc-800">
-                        {options
-                          .filter(
-                            (o) =>
-                              o.text.trim().length > 0 || Boolean(o.imageUrl)
-                          )
-                          .map((o) => (
-                            <li key={o.id}>
-                              {o.text.trim() || "(görsel)"}
-                              {o.imageUrl ? " · görsel eklendi" : ""}
-                            </li>
-                          ))}
-                      </ul>
-                    </dd>
+                  <div className="px-5 py-4">
+                    <span className="text-sm text-slate-400">
+                      Seçenekler ({options.filter((o) => o.text.trim().length > 0 || Boolean(o.imageUrl)).length})
+                    </span>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {options
+                        .filter((o) => o.text.trim().length > 0 || Boolean(o.imageUrl))
+                        .map((o) => (
+                          <span
+                            key={o.id}
+                            className="inline-flex items-center rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600"
+                          >
+                            {o.text.trim() || "Görsel"}
+                            {o.imageUrl && <span className="ml-1 text-slate-400">📷</span>}
+                          </span>
+                        ))}
+                    </div>
                   </div>
-                </dl>
+                </div>
               </div>
 
               {saveError && (
-                <p
-                  className="rounded-2xl bg-red-50 px-4 py-3 text-center text-sm text-red-800 ring-1 ring-red-100"
+                <div
+                  className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-center text-sm text-red-600"
                   role="alert"
                 >
                   {saveError}
-                </p>
+                </div>
               )}
 
               <button
                 type="button"
                 disabled={isSaving}
                 onClick={() => void handleSave()}
-                className="flex min-h-14 w-full items-center justify-center rounded-2xl bg-emerald-600 text-lg font-bold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70 active:bg-emerald-800"
+                className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 text-base font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98]"
               >
-                {isSaving ? "Kaydediliyor…" : "Kaydet ve Oyna ✓"}
+                {isSaving ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Kaydediliyor...
+                  </>
+                ) : (
+                  "Kaydet ve Oyna"
+                )}
               </button>
             </section>
           )}

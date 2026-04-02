@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { playTickSound, playWheelStopSound } from "@/lib/sounds";
+import type { GameStats } from "@/types/game";
 
 export interface SpinningWheelProps {
   options: { id: string; text?: string; imageUrl?: string }[];
@@ -13,7 +14,7 @@ export interface SpinningWheelProps {
     wheelColors: string[];
     celebrationText: string;
   };
-  onComplete: () => void;
+  onComplete: (stats: GameStats) => void;
 }
 
 const CX = 100;
@@ -71,6 +72,7 @@ export default function SpinningWheel({
   onComplete,
 }: SpinningWheelProps) {
   const initialSnapshot = useRef(initialOptions);
+  const startTime = useRef(Date.now());
   const [remaining, setRemaining] = useState(() => shuffle([...initialOptions]));
   const [rotation, setRotation] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -96,7 +98,13 @@ export default function SpinningWheel({
 
   useEffect(() => {
     if (remaining.length === 0) {
-      onComplete();
+      onComplete({
+        totalItems: initialSnapshot.current.length,
+        correctCount: initialSnapshot.current.length,
+        wrongCount: 0,
+        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
+        completedAt: new Date().toISOString(),
+      });
     }
   }, [remaining.length, onComplete]);
 
@@ -173,33 +181,35 @@ export default function SpinningWheel({
     setRemaining(shuffle([...initialSnapshot.current]));
   }, [clearTickInterval]);
 
-  const wheelColors = theme.wheelColors.length > 0 ? theme.wheelColors : ["#6366f1", "#8b5cf6", "#ec4899"];
+  const wheelColors = theme.wheelColors.length > 0 ? theme.wheelColors : ["#FF6B9D", "#FFD93D", "#4D96FF"];
 
   return (
     <div
-      className="flex w-full flex-col items-center gap-6 px-3 py-4 md:px-4"
+      className="flex w-full flex-col items-center gap-6 px-3 py-6 md:px-4"
       style={{ backgroundColor: theme.backgroundColor }}
     >
-      <div className="relative w-full max-w-[min(100%,500px)] aspect-square">
-        {/* Pointer */}
+      <div className="relative w-full max-w-[min(100%,520px)] aspect-square">
+        {/* Pointer - playful triangle */}
         <div
           className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1"
           aria-hidden
         >
-          <svg width="36" height="28" viewBox="0 0 36 28" className="drop-shadow-md">
+          <svg width="40" height="32" viewBox="0 0 40 32" className="drop-shadow-lg">
             <polygon
-              points="18,26 4,4 32,4"
-              fill="#1e293b"
-              stroke="#f8fafc"
-              strokeWidth="2"
+              points="20,30 4,4 36,4"
+              fill="#2D1B69"
+              stroke="#FFD93D"
+              strokeWidth="3"
               strokeLinejoin="round"
             />
           </svg>
         </div>
 
         <div
-          className="absolute inset-0 flex items-center justify-center rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
-          style={{ filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.2))" }}
+          className="absolute inset-0 flex items-center justify-center rounded-full"
+          style={{
+            boxShadow: "0 12px 40px rgba(45, 27, 105, 0.2), 0 0 0 6px rgba(255,255,255,0.8), 0 0 0 10px rgba(45, 27, 105, 0.08)",
+          }}
         >
           <div
             className="h-full w-full rounded-full will-change-transform"
@@ -223,7 +233,7 @@ export default function SpinningWheel({
                 </filter>
               </defs>
               {n === 0 ? (
-                <circle cx={CX} cy={CY} r={R_OUTER} fill="#334155" />
+                <circle cx={CX} cy={CY} r={R_OUTER} fill="#2D1B69" />
               ) : (
                 remaining.map((opt, i) => {
                   const startDeg = -90 + i * sliceDeg;
@@ -244,8 +254,8 @@ export default function SpinningWheel({
                       <path
                         d={donutSlicePath(startDeg, endDeg, R_INNER, R_OUTER)}
                         fill={fill}
-                        stroke={isHighlight ? "#fef08a" : "rgba(255,255,255,0.35)"}
-                        strokeWidth={isHighlight ? 4 : 1}
+                        stroke={isHighlight ? "#FFD93D" : "rgba(255,255,255,0.4)"}
+                        strokeWidth={isHighlight ? 4 : 1.5}
                         className="transition-[stroke,stroke-width] duration-300"
                       />
                       {opt.imageUrl ? (
@@ -272,8 +282,8 @@ export default function SpinningWheel({
                           dominantBaseline="middle"
                           fill="white"
                           fontSize={n <= 4 ? 11 : n <= 8 ? 9 : 8}
-                          fontWeight="700"
-                          fontFamily="system-ui, sans-serif"
+                          fontWeight="800"
+                          fontFamily="'Nunito', system-ui, sans-serif"
                           transform={`rotate(${midDeg + 90}, ${mid.x}, ${mid.y})`}
                           style={{
                             filter: "url(#wheelTextShadow)",
@@ -290,17 +300,24 @@ export default function SpinningWheel({
             </svg>
           </div>
 
-          {/* Center hub + spin */}
+          {/* Center hub + spin button */}
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div
-              className="pointer-events-auto flex h-[26%] max-h-[130px] min-h-[72px] w-[26%] min-w-[72px] max-w-[130px] items-center justify-center rounded-full border-4 border-white/90 bg-white shadow-lg"
-              style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.2), inset 0 2px 8px rgba(255,255,255,0.9)" }}
+              className="pointer-events-auto flex h-[26%] max-h-[130px] min-h-[72px] w-[26%] min-w-[72px] max-w-[130px] items-center justify-center rounded-full bg-white"
+              style={{
+                border: "4px solid #FFD93D",
+                boxShadow: "0 4px 20px rgba(45, 27, 105, 0.15), inset 0 2px 8px rgba(255,255,255,0.9)",
+              }}
             >
               <button
                 type="button"
                 onClick={handleSpin}
                 disabled={isSpinning || n < 1}
-                className="flex h-[78%] w-[78%] items-center justify-center rounded-full bg-slate-800 text-sm font-bold text-white shadow-inner transition enabled:hover:bg-slate-700 enabled:active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 md:text-base"
+                className="flex h-[78%] w-[78%] items-center justify-center rounded-full font-heading text-base font-bold text-white shadow-inner transition enabled:hover:scale-105 enabled:active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 md:text-lg"
+                style={{
+                  background: "linear-gradient(135deg, #FF6B9D, #FF8A50)",
+                  boxShadow: "0 3px 0 #D4456E, inset 0 1px 2px rgba(255,255,255,0.3)",
+                }}
               >
                 Çevir
               </button>
@@ -309,40 +326,49 @@ export default function SpinningWheel({
         </div>
       </div>
 
+      {/* Winner result card */}
       {selectedOption && !isSpinning && (
-        <div className="w-full max-w-md rounded-2xl border border-white/20 bg-white/95 p-4 shadow-xl backdrop-blur-sm dark:bg-slate-900/95">
-          <p className="mb-1 text-center text-xs font-medium uppercase tracking-wide text-slate-500">
-            Seçilen
+        <div
+          className="animate-bounce-in w-full max-w-md rounded-3xl p-5 shadow-xl"
+          style={{
+            background: "white",
+            border: "2px solid rgba(45, 27, 105, 0.06)",
+          }}
+        >
+          <p className="mb-2 text-center text-xs font-bold uppercase tracking-wider text-[#8B7BAD]">
+            🎯 Seçilen
           </p>
           <div className="flex flex-col items-center gap-3">
             {selectedOption.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={selectedOption.imageUrl}
                 alt=""
-                className="h-20 w-20 rounded-lg object-cover shadow-md"
+                className="h-24 w-24 rounded-2xl object-cover shadow-md"
+                style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}
               />
             )}
             {selectedOption.text && (
-              <p className="text-center text-lg font-semibold text-slate-800 dark:text-slate-100">
+              <p className="text-center font-heading text-2xl font-bold text-[#2D1B69]">
                 {selectedOption.text}
               </p>
             )}
             {!selectedOption.text && !selectedOption.imageUrl && (
-              <p className="text-slate-500">—</p>
+              <p className="text-[#8B7BAD]">—</p>
             )}
           </div>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
             <button
               type="button"
               onClick={removeWinner}
-              className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-rose-700 active:scale-[0.98]"
+              className="btn-candy rounded-xl px-5 py-3 text-sm"
             >
               Bu Seçeneği Kaldır
             </button>
             <button
               type="button"
               onClick={spinAgain}
-              className="rounded-xl bg-slate-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-600 active:scale-[0.98]"
+              className="btn-candy btn-blue rounded-xl px-5 py-3 text-sm"
             >
               Tekrar Çevir
             </button>
@@ -350,17 +376,19 @@ export default function SpinningWheel({
         </div>
       )}
 
-      <div className="flex flex-col items-center gap-2">
-        <p className="text-center text-sm text-slate-600/90 dark:text-slate-300">
+      {/* Footer info + restart */}
+      <div className="flex flex-col items-center gap-3">
+        <p className="text-center text-sm font-bold text-[#8B7BAD]">
           {theme.emoji} {theme.celebrationText}
         </p>
         <button
           type="button"
           onClick={resetAll}
           disabled={isSpinning}
-          className="rounded-xl border-2 border-slate-600/30 bg-white/80 px-5 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-white disabled:opacity-50 dark:bg-slate-800/80 dark:text-slate-100"
+          className="rounded-2xl bg-white px-6 py-2.5 font-heading text-sm font-bold text-[#2D1B69] shadow-md transition hover:scale-105 hover:shadow-lg disabled:opacity-50"
+          style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}
         >
-          Yeniden Başlat
+          🔄 Yeniden Başlat
         </button>
       </div>
     </div>

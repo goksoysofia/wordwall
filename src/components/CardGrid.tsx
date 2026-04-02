@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { playCardOpenSound } from "@/lib/sounds";
+import type { GameStats } from "@/types/game";
 
 export interface CardGridProps {
   options: { id: string; text?: string; imageUrl?: string }[];
@@ -15,7 +16,7 @@ export interface CardGridProps {
     cardFrontEmojis: string[];
     celebrationText: string;
   };
-  onComplete: () => void;
+  onComplete: (stats: GameStats) => void;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -42,6 +43,7 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
   const [modalCardId, setModalCardId] = useState<string | null>(null);
   const [modalFlipped, setModalFlipped] = useState(false);
   const completedRef = useRef(false);
+  const startTime = useRef(Date.now());
 
   const idsKey = useMemo(() => initialIds.join(","), [initialIds]);
 
@@ -64,7 +66,13 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
     if (options.length === 0) return;
     if (openedIds.size === options.length && !completedRef.current) {
       completedRef.current = true;
-      onComplete();
+      onComplete({
+        totalItems: options.length,
+        correctCount: options.length,
+        wrongCount: 0,
+        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
+        completedAt: new Date().toISOString(),
+      });
     }
   }, [openedIds.size, options.length, onComplete]);
 
@@ -102,7 +110,7 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
 
   return (
     <div
-      className="min-h-[100dvh] w-full px-3 py-4 pb-24 md:px-6 md:py-6"
+      className="min-h-[100dvh] w-full px-3 py-6 pb-28 md:px-6 md:py-8"
       style={{ backgroundColor: theme.backgroundColor }}
     >
       <div
@@ -110,8 +118,8 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
         style={
           {
             display: "grid",
-            gap: "clamp(0.75rem, 2vw, 1.25rem)",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr))",
+            gap: "clamp(0.875rem, 2.5vw, 1.5rem)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 10rem), 1fr))",
           } as React.CSSProperties
         }
       >
@@ -127,17 +135,18 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
               key={id}
               type="button"
               layout
-              whileTap={{ scale: 0.97 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => openCard(id)}
-              className="relative aspect-[4/5] w-full max-w-none rounded-2xl border-0 p-2 shadow-lg outline-none ring-2 ring-black/5 focus-visible:ring-4 focus-visible:ring-purple-400 md:p-2.5"
+              className="relative aspect-[4/5] w-full max-w-none rounded-3xl border-0 p-2.5 outline-none focus-visible:ring-4 focus-visible:ring-[#FF6B9D]/40 md:p-3"
               style={{
-                backgroundColor: theme.backgroundColor,
-                boxShadow: "0 10px 28px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.08)",
+                backgroundColor: "white",
+                border: "2px solid rgba(45, 27, 105, 0.06)",
+                boxShadow: "0 4px 0 rgba(45, 27, 105, 0.04), 0 10px 28px rgba(45, 27, 105, 0.08)",
               }}
               aria-label={isOpen ? `Açık kart: ${opt.text ?? "içerik"}` : "Kapalı kart"}
             >
               <div
-                className="flex h-full w-full flex-col overflow-hidden rounded-xl"
+                className="flex h-full w-full flex-col overflow-hidden rounded-2xl"
                 style={{ backgroundColor: isOpen ? cardBg : "transparent" }}
               >
                 {isOpen ? (
@@ -147,19 +156,22 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
                       <img
                         src={opt.imageUrl}
                         alt=""
-                        className="max-h-[55%] w-full max-w-full rounded-lg object-contain"
+                        className="max-h-[55%] w-full max-w-full rounded-xl object-contain"
                       />
                     ) : null}
                     {opt.text ? (
-                      <p className="text-base font-semibold leading-snug text-white drop-shadow-sm md:text-lg">
+                      <p className="font-heading text-base font-bold leading-snug text-white drop-shadow-sm md:text-lg">
                         {opt.text}
                       </p>
                     ) : null}
                   </div>
                 ) : (
                   <div
-                    className="flex h-full w-full items-center justify-center rounded-xl shadow-inner"
-                    style={{ backgroundColor: cardBg }}
+                    className="flex h-full w-full items-center justify-center rounded-2xl"
+                    style={{
+                      backgroundColor: cardBg,
+                      boxShadow: "inset 0 2px 8px rgba(0,0,0,0.1)",
+                    }}
                   >
                     <span className="select-none text-5xl md:text-6xl" aria-hidden>
                       {emoji}
@@ -172,16 +184,18 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
         })}
       </div>
 
-      <div className="fixed bottom-4 left-0 right-0 z-30 flex justify-center px-4">
+      {/* Restart button */}
+      <div className="fixed bottom-5 left-0 right-0 z-30 flex justify-center px-4">
         <button
           type="button"
           onClick={handleRestart}
-          className="rounded-full bg-gray-900 px-6 py-3 text-base font-semibold text-white shadow-lg active:scale-[0.98] md:py-3.5 md:text-lg"
+          className="btn-candy rounded-full px-8 py-3.5 text-base md:text-lg"
         >
-          Yeniden Başlat
+          🔄 Yeniden Başlat
         </button>
       </div>
 
+      {/* Card Modal */}
       <AnimatePresence>
         {modalCardId && modalOption && modalIndex >= 0 && (
           <motion.div
@@ -199,14 +213,14 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+              className="absolute inset-0 bg-black/40 backdrop-blur-[3px]"
             />
 
             <motion.div
-              initial={{ scale: 0.65, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+              initial={{ scale: 0.6, opacity: 0, rotate: -5 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
               exit={{ scale: 0.85, opacity: 0 }}
-              transition={{ type: "spring", damping: 22, stiffness: 280 }}
+              transition={{ type: "spring", damping: 20, stiffness: 260 }}
               className="relative z-10 flex w-full max-w-md flex-col items-center gap-6"
               onClick={(e) => e.stopPropagation()}
             >
@@ -218,26 +232,29 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
                   animate={{ rotateY: modalFlipped ? 180 : 0 }}
                   transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
                 >
+                  {/* Card front (emoji side) */}
                   <div
-                    className="absolute inset-0 flex items-center justify-center rounded-3xl shadow-2xl"
+                    className="absolute inset-0 flex items-center justify-center rounded-3xl"
                     style={{
                       backfaceVisibility: "hidden",
                       WebkitBackfaceVisibility: "hidden",
                       backgroundColor: colors[modalIndex % colors.length],
-                      boxShadow: "0 24px 48px rgba(0,0,0,0.25)",
+                      boxShadow: "0 24px 48px rgba(45, 27, 105, 0.25), 0 0 0 4px rgba(255,255,255,0.6)",
                     }}
                   >
                     <span className="text-7xl md:text-8xl" aria-hidden>
                       {emojis[modalIndex % emojis.length]}
                     </span>
                   </div>
+                  {/* Card back (content side) */}
                   <div
-                    className="absolute inset-0 flex flex-col items-center justify-center gap-4 overflow-hidden rounded-3xl p-6 shadow-2xl"
+                    className="absolute inset-0 flex flex-col items-center justify-center gap-4 overflow-hidden rounded-3xl p-6"
                     style={{
                       backfaceVisibility: "hidden",
                       WebkitBackfaceVisibility: "hidden",
                       transform: "rotateY(180deg)",
                       backgroundColor: colors[modalIndex % colors.length],
+                      boxShadow: "0 24px 48px rgba(45, 27, 105, 0.25), 0 0 0 4px rgba(255,255,255,0.6)",
                     }}
                   >
                     {modalOption.imageUrl ? (
@@ -249,7 +266,7 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
                       />
                     ) : null}
                     {modalOption.text ? (
-                      <p className="text-center text-xl font-bold text-white drop-shadow-md md:text-2xl">
+                      <p className="text-center font-heading text-2xl font-bold text-white drop-shadow-md md:text-3xl">
                         {modalOption.text}
                       </p>
                     ) : null}
@@ -259,13 +276,13 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
 
               <motion.button
                 type="button"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: modalFlipped ? 1 : 0, y: modalFlipped ? 0 : 8 }}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: modalFlipped ? 1 : 0, y: modalFlipped ? 0 : 12 }}
                 transition={{ delay: modalFlipped ? 0.35 : 0 }}
                 onClick={closeModal}
-                className="min-h-[48px] min-w-[200px] rounded-full bg-white px-8 py-3 text-lg font-semibold text-gray-900 shadow-lg active:scale-[0.98]"
+                className="btn-candy min-h-[52px] min-w-[200px] rounded-full px-8 py-3.5 text-lg"
               >
-                Devam Et
+                Devam Et →
               </motion.button>
             </motion.div>
           </motion.div>

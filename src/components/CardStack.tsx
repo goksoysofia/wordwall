@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { playCardOpenSound } from "@/lib/sounds";
+import type { GameStats } from "@/types/game";
 
 function useIsNarrowMobile() {
   const subscribe = useCallback((onStoreChange: () => void) => {
@@ -26,7 +27,7 @@ export interface CardStackProps {
     cardFrontEmojis: string[];
     celebrationText: string;
   };
-  onComplete: () => void;
+  onComplete: (stats: GameStats) => void;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -54,6 +55,7 @@ export default function CardStack({ options, theme, onComplete }: CardStackProps
   const [currentOpenId, setCurrentOpenId] = useState<string | null>(null);
   const [flipOpen, setFlipOpen] = useState(false);
   const completedRef = useRef(false);
+  const startTime = useRef(Date.now());
 
   const idsKey = useMemo(() => initialIds.join(","), [initialIds]);
 
@@ -76,7 +78,13 @@ export default function CardStack({ options, theme, onComplete }: CardStackProps
     if (options.length === 0) return;
     if (openedIds.size === options.length && !completedRef.current) {
       completedRef.current = true;
-      onComplete();
+      onComplete({
+        totalItems: options.length,
+        correctCount: options.length,
+        wrongCount: 0,
+        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
+        completedAt: new Date().toISOString(),
+      });
     }
   }, [openedIds.size, options.length, onComplete]);
 
@@ -115,9 +123,9 @@ export default function CardStack({ options, theme, onComplete }: CardStackProps
       className="flex min-h-[100dvh] w-full flex-col md:flex-row md:gap-6"
       style={{ backgroundColor: theme.backgroundColor }}
     >
-      {/* Stack area: top on mobile, left on desktop */}
-      <div className="relative flex min-h-[240px] flex-1 items-end justify-center pb-4 pt-6 md:min-h-0 md:max-w-[48%] md:items-center md:pb-8 md:pt-8">
-        <div className="relative h-[220px] w-full max-w-sm md:h-[min(70vh,480px)] md:max-w-md">
+      {/* Stack area */}
+      <div className="relative flex min-h-[260px] flex-1 items-end justify-center pb-4 pt-8 md:min-h-0 md:max-w-[48%] md:items-center md:pb-8 md:pt-8">
+        <div className="relative h-[240px] w-full max-w-sm md:h-[min(70vh,480px)] md:max-w-md">
           {closedStack.map((id, stackIndex) => {
             const opt = optionMap.get(id);
             if (!opt) return null;
@@ -136,20 +144,21 @@ export default function CardStack({ options, theme, onComplete }: CardStackProps
                 type="button"
                 disabled={!isTop}
                 onClick={() => isTop && drawTopCard()}
-                className="absolute left-1/2 top-1/2 h-[min(42vw,11rem)] w-[min(58vw,14rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-0 p-0 shadow-xl outline-none disabled:cursor-default md:h-52 md:w-44"
+                className="absolute left-1/2 top-1/2 h-[min(42vw,12rem)] w-[min(58vw,15rem)] -translate-x-1/2 -translate-y-1/2 rounded-3xl border-0 p-0 outline-none disabled:cursor-default md:h-56 md:w-48"
                 style={{
                   zIndex: stackIndex + 1,
                   x: offsetX,
                   y: offsetY,
                   rotate: fanRotate,
                   pointerEvents: isTop ? "auto" : "none",
-                  boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
+                  boxShadow: "0 4px 0 rgba(45, 27, 105, 0.04), 0 12px 32px rgba(45, 27, 105, 0.12)",
+                  border: "2px solid rgba(255,255,255,0.8)",
                 }}
                 whileTap={isTop ? { scale: 0.96 } : undefined}
                 aria-label={isTop ? "Üstteki kartı aç" : undefined}
               >
                 <div
-                  className="flex h-full w-full items-center justify-center rounded-2xl"
+                  className="flex h-full w-full items-center justify-center rounded-3xl"
                   style={{ backgroundColor: cardBg }}
                 >
                   <span className="text-5xl md:text-6xl" aria-hidden>
@@ -160,15 +169,15 @@ export default function CardStack({ options, theme, onComplete }: CardStackProps
             );
           })}
           {closedStack.length === 0 && (
-            <p className="absolute inset-0 flex items-center justify-center text-center text-gray-600">
-              Tüm kartlar açıldı
+            <p className="absolute inset-0 flex items-center justify-center text-center font-heading text-lg font-bold text-[#8B7BAD]">
+              Tüm kartlar açıldı 🎉
             </p>
           )}
         </div>
       </div>
 
-      {/* Opened card: bottom mobile, right desktop */}
-      <div className="relative flex flex-1 flex-col items-center justify-start px-4 pb-28 pt-2 md:justify-center md:pb-12 md:pt-8">
+      {/* Opened card area */}
+      <div className="relative flex flex-1 flex-col items-center justify-start px-4 pb-28 pt-4 md:justify-center md:pb-12 md:pt-8">
         <AnimatePresence mode="wait">
           {currentOpenId && currentOption && currentIndex >= 0 ? (
             <motion.div
@@ -196,11 +205,13 @@ export default function CardStack({ options, theme, onComplete }: CardStackProps
                   transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
                 >
                   <div
-                    className="absolute inset-0 flex items-center justify-center rounded-3xl shadow-2xl"
+                    className="absolute inset-0 flex items-center justify-center rounded-3xl"
                     style={{
                       backfaceVisibility: "hidden",
                       WebkitBackfaceVisibility: "hidden",
                       backgroundColor: colors[currentIndex % colors.length],
+                      boxShadow: "0 4px 0 rgba(45, 27, 105, 0.04), 0 24px 48px rgba(45, 27, 105, 0.15)",
+                      border: "2px solid rgba(255,255,255,0.6)",
                     }}
                   >
                     <span className="text-7xl md:text-8xl" aria-hidden>
@@ -208,12 +219,14 @@ export default function CardStack({ options, theme, onComplete }: CardStackProps
                     </span>
                   </div>
                   <div
-                    className="absolute inset-0 flex flex-col items-center justify-center gap-4 overflow-hidden rounded-3xl p-6 shadow-2xl"
+                    className="absolute inset-0 flex flex-col items-center justify-center gap-4 overflow-hidden rounded-3xl p-6"
                     style={{
                       backfaceVisibility: "hidden",
                       WebkitBackfaceVisibility: "hidden",
                       transform: "rotateY(180deg)",
                       backgroundColor: colors[currentIndex % colors.length],
+                      boxShadow: "0 4px 0 rgba(45, 27, 105, 0.04), 0 24px 48px rgba(45, 27, 105, 0.15)",
+                      border: "2px solid rgba(255,255,255,0.6)",
                     }}
                   >
                     {currentOption.imageUrl ? (
@@ -225,7 +238,7 @@ export default function CardStack({ options, theme, onComplete }: CardStackProps
                       />
                     ) : null}
                     {currentOption.text ? (
-                      <p className="text-center text-xl font-bold text-white drop-shadow-md md:text-2xl">
+                      <p className="text-center font-heading text-2xl font-bold text-white drop-shadow-md md:text-3xl">
                         {currentOption.text}
                       </p>
                     ) : null}
@@ -239,21 +252,22 @@ export default function CardStack({ options, theme, onComplete }: CardStackProps
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-center text-gray-500 md:mt-0"
+              className="text-center font-heading text-lg font-bold text-[#8B7BAD] md:mt-0"
             >
-              Desteden bir kart seç
+              Desteden bir kart seç 👆
             </motion.p>
           )}
         </AnimatePresence>
       </div>
 
-      <div className="fixed bottom-4 left-0 right-0 z-30 flex justify-center px-4">
+      {/* Restart button */}
+      <div className="fixed bottom-5 left-0 right-0 z-30 flex justify-center px-4">
         <button
           type="button"
           onClick={handleRestart}
-          className="rounded-full bg-gray-900 px-6 py-3 text-base font-semibold text-white shadow-lg active:scale-[0.98] md:py-3.5 md:text-lg"
+          className="btn-candy rounded-full px-8 py-3.5 text-base md:text-lg"
         >
-          Yeniden Başlat
+          🔄 Yeniden Başlat
         </button>
       </div>
     </div>

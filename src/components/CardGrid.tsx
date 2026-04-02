@@ -49,6 +49,7 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
 
   useEffect(() => {
     completedRef.current = false;
+    startTime.current = Date.now();
     setOpenedIds(new Set());
     setModalCardId(null);
     setModalFlipped(false);
@@ -96,6 +97,7 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
 
   const handleRestart = useCallback(() => {
     completedRef.current = false;
+    startTime.current = Date.now();
     setOrderedIds((prev) => restartOrder(prev, openedIds));
     setOpenedIds(new Set());
     setModalCardId(null);

@@ -21,7 +21,6 @@ const CX = 100;
 const CY = 100;
 const R_OUTER = 92;
 const R_INNER = 38;
-const SPIN_DURATION_MS = 4000;
 const MIN_FULL_SPINS = 5;
 
 function shuffle<T>(items: T[]): T[] {
@@ -66,6 +65,11 @@ function truncateLabel(text: string, maxLen: number): string {
   return `${t.slice(0, Math.max(1, maxLen - 1))}…`;
 }
 
+/** Custom ease-out curve matching cubic-bezier(0.22, 1, 0.36, 1) */
+function easeOutQuint(t: number): number {
+  return 1 - Math.pow(1 - t, 5);
+}
+
 export default function SpinningWheel({
   options: initialOptions,
   theme,
@@ -73,32 +77,30 @@ export default function SpinningWheel({
 }: SpinningWheelProps) {
   const initialSnapshot = useRef(initialOptions);
   const startTime = useRef(Date.now());
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+  const hasCompletedRef = useRef(false);
   const [remaining, setRemaining] = useState(() => shuffle([...initialOptions]));
   const [rotation, setRotation] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const [winnerIndex, setWinnerIndex] = useState<number | null>(null);
-  const rotationRef = useRef(0);
-  const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Animation refs
+  const animRef = useRef<number | null>(null);
+  const animStartTime = useRef(0);
+  const animStartRotation = useRef(0);
+  const animTargetRotation = useRef(0);
+  const animDuration = useRef(4000);
+  const lastSliceIndex = useRef(-1);
   const pendingWinnerRef = useRef<number | null>(null);
-  const spinActiveRef = useRef(false);
 
   const n = remaining.length;
   const sliceDeg = n > 0 ? 360 / n : 0;
 
   useEffect(() => {
-    rotationRef.current = rotation;
-  }, [rotation]);
-
-  const clearTickInterval = useCallback(() => {
-    if (tickIntervalRef.current !== null) {
-      clearInterval(tickIntervalRef.current);
-      tickIntervalRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (remaining.length === 0) {
-      onComplete({
+    if (remaining.length === 0 && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
+      onCompleteRef.current({
         totalItems: initialSnapshot.current.length,
         correctCount: initialSnapshot.current.length,
         wrongCount: 0,
@@ -106,9 +108,14 @@ export default function SpinningWheel({
         completedAt: new Date().toISOString(),
       });
     }
-  }, [remaining.length, onComplete]);
+  }, [remaining.length]);
 
-  useEffect(() => () => clearTickInterval(), [clearTickInterval]);
+  // Cleanup animation on unmount
+  useEffect(() => {
+    return () => {
+      if (animRef.current !== null) cancelAnimationFrame(animRef.current);
+    };
+  }, []);
 
   const maxLabelLen = useMemo(() => {
     if (n <= 0) return 12;
@@ -118,47 +125,73 @@ export default function SpinningWheel({
     return 10;
   }, [n]);
 
+  const animate = useCallback(
+    (timestamp: number) => {
+      const elapsed = timestamp - animStartTime.current;
+      const duration = animDuration.current;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = easeOutQuint(progress);
+
+      const startRot = animStartRotation.current;
+      const targetRot = animTargetRotation.current;
+      const currentRot = startRot + (targetRot - startRot) * eased;
+
+      setRotation(currentRot);
+
+      // Tick sound on slice boundary crossing
+      if (n > 0) {
+        const normalizedDeg = ((currentRot % 360) + 360) % 360;
+        const currentSlice = Math.floor(normalizedDeg / sliceDeg) % n;
+        if (currentSlice !== lastSliceIndex.current && lastSliceIndex.current !== -1) {
+          playTickSound();
+        }
+        lastSliceIndex.current = currentSlice;
+      }
+
+      if (progress < 1) {
+        animRef.current = requestAnimationFrame(animate);
+      } else {
+        // Animation complete
+        animRef.current = null;
+        playWheelStopSound();
+        setIsSpinning(false);
+        const w = pendingWinnerRef.current;
+        pendingWinnerRef.current = null;
+        if (w !== null) setWinnerIndex(w);
+      }
+    },
+    [n, sliceDeg]
+  );
+
   const handleSpin = useCallback(() => {
     if (isSpinning || n < 1) return;
 
     setWinnerIndex(null);
     setIsSpinning(true);
 
-    tickIntervalRef.current = setInterval(() => {
-      playTickSound();
-    }, 100);
-
-    const current = rotationRef.current;
+    const current = rotation;
     const winner = Math.floor(Math.random() * n);
-    const targetMod = winner * sliceDeg + sliceDeg / 2;
+    // The pointer is at top (-90°). Slice i center is at -90 + i*sliceDeg + sliceDeg/2.
+    // To align slice center with pointer, we need rotation = -(i*sliceDeg + sliceDeg/2).
+    const targetMod = (360 - (winner * sliceDeg + sliceDeg / 2) + 360) % 360;
     const currentMod = ((current % 360) + 360) % 360;
     let delta = (targetMod - currentMod + 360) % 360;
     if (delta < 1) delta += 360;
     const spinAmount = MIN_FULL_SPINS * 360 + delta;
     const nextRotation = current + spinAmount;
 
+    // Longer duration for more spins = more dramatic
+    const totalDegrees = spinAmount;
+    animDuration.current = Math.min(3000 + totalDegrees * 1.2, 6000);
+
     pendingWinnerRef.current = winner;
-    spinActiveRef.current = true;
+    animStartRotation.current = current;
+    animTargetRotation.current = nextRotation;
+    lastSliceIndex.current = -1;
 
-    requestAnimationFrame(() => {
-      setRotation(nextRotation);
-    });
-  }, [isSpinning, n, sliceDeg]);
-
-  const onTransitionEnd = useCallback(
-    (e: React.TransitionEvent<HTMLDivElement>) => {
-      if (e.propertyName !== "transform" || e.target !== e.currentTarget) return;
-      if (!spinActiveRef.current) return;
-      spinActiveRef.current = false;
-      clearTickInterval();
-      playWheelStopSound();
-      setIsSpinning(false);
-      const w = pendingWinnerRef.current;
-      pendingWinnerRef.current = null;
-      if (w !== null) setWinnerIndex(w);
-    },
-    [clearTickInterval]
-  );
+    animStartTime.current = performance.now();
+    animRef.current = requestAnimationFrame(animate);
+  }, [isSpinning, n, sliceDeg, rotation, animate]);
 
   const selectedOption = winnerIndex !== null && winnerIndex < n ? remaining[winnerIndex] : null;
 
@@ -173,13 +206,16 @@ export default function SpinningWheel({
   }, []);
 
   const resetAll = useCallback(() => {
-    clearTickInterval();
+    if (animRef.current !== null) {
+      cancelAnimationFrame(animRef.current);
+      animRef.current = null;
+    }
     setIsSpinning(false);
     setWinnerIndex(null);
     setRotation(0);
-    rotationRef.current = 0;
     setRemaining(shuffle([...initialSnapshot.current]));
-  }, [clearTickInterval]);
+    hasCompletedRef.current = false;
+  }, []);
 
   const wheelColors = theme.wheelColors.length > 0 ? theme.wheelColors : ["#FF6B9D", "#FFD93D", "#4D96FF"];
 
@@ -189,7 +225,7 @@ export default function SpinningWheel({
       style={{ backgroundColor: theme.backgroundColor }}
     >
       <div className="relative w-full max-w-[min(100%,520px)] aspect-square">
-        {/* Pointer - playful triangle */}
+        {/* Pointer */}
         <div
           className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1"
           aria-hidden
@@ -212,14 +248,10 @@ export default function SpinningWheel({
           }}
         >
           <div
-            className="h-full w-full rounded-full will-change-transform"
+            className="h-full w-full rounded-full"
             style={{
               transform: `rotate(${rotation}deg)`,
-              transition: isSpinning
-                ? `transform ${SPIN_DURATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`
-                : "none",
             }}
-            onTransitionEnd={onTransitionEnd}
           >
             <svg
               viewBox="0 0 200 200"
@@ -256,7 +288,6 @@ export default function SpinningWheel({
                         fill={fill}
                         stroke={isHighlight ? "#FFD93D" : "rgba(255,255,255,0.4)"}
                         strokeWidth={isHighlight ? 4 : 1.5}
-                        className="transition-[stroke,stroke-width] duration-300"
                       />
                       {opt.imageUrl ? (
                         <g
@@ -285,10 +316,7 @@ export default function SpinningWheel({
                           fontWeight="800"
                           fontFamily="'Nunito', system-ui, sans-serif"
                           transform={`rotate(${midDeg + 90}, ${mid.x}, ${mid.y})`}
-                          style={{
-                            filter: "url(#wheelTextShadow)",
-                            maxWidth: 40,
-                          }}
+                          style={{ filter: "url(#wheelTextShadow)" }}
                         >
                           {label}
                         </text>

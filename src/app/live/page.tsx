@@ -8,16 +8,38 @@ export default function LiveJoinPage() {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
 
-  function handleJoin() {
+  async function handleJoin() {
     const trimmed = code.trim();
     if (trimmed.length !== 6) {
       setError("Kod 6 haneli olmalıdır.");
       return;
     }
-    // For now, redirect to play page with session code
-    // In the future, this will check Supabase for the session
-    router.push(`/live/${trimmed}`);
+
+    setChecking(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/live-sessions/${trimmed}`);
+      if (res.status === 404) {
+        setError("Bu kodla aktif bir seans bulunamadı.");
+        return;
+      }
+      if (res.status === 410) {
+        setError("Bu seansın süresi dolmuş.");
+        return;
+      }
+      if (!res.ok) {
+        setError("Seans kontrol edilirken bir hata oluştu.");
+        return;
+      }
+      router.push(`/live/${trimmed}`);
+    } catch {
+      setError("Bağlantı hatası. Lütfen tekrar deneyin.");
+    } finally {
+      setChecking(false);
+    }
   }
 
   return (
@@ -48,10 +70,10 @@ export default function LiveJoinPage() {
           <button
             type="button"
             onClick={handleJoin}
-            disabled={code.length !== 6}
+            disabled={code.length !== 6 || checking}
             className="btn-candy btn-green w-full rounded-2xl py-3.5 text-lg disabled:opacity-50"
           >
-            Katıl 🚀
+            {checking ? "Kontrol ediliyor..." : "Katıl 🚀"}
           </button>
 
           <Link href="/dashboard" className="mt-4 inline-block text-sm font-bold text-[#8B7BAD] hover:text-[#FF6B9D]">

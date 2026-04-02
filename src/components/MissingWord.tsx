@@ -20,6 +20,7 @@ export interface MissingWordProps {
 export default function MissingWord({ options, title, theme, onComplete }: MissingWordProps) {
   const startTime = useRef(Date.now());
   const wrongCountRef = useRef(0);
+  const hasCompleted = useRef(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
@@ -57,9 +58,10 @@ export default function MissingWord({ options, title, theme, onComplete }: Missi
   }, [selected, answered, options]);
 
   useEffect(() => {
-    if (answered && isCorrect) {
+    if (answered && isCorrect && !hasCompleted.current) {
+      hasCompleted.current = true;
       const stats: GameStats = {
-        totalItems: options.length,
+        totalItems: 1,
         correctCount: 1,
         wrongCount: wrongCountRef.current,
         timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
@@ -68,12 +70,15 @@ export default function MissingWord({ options, title, theme, onComplete }: Missi
       const t = setTimeout(() => onComplete(stats), 1500);
       return () => clearTimeout(t);
     }
-  }, [answered, isCorrect, onComplete, options.length]);
+  }, [answered, isCorrect, onComplete]);
 
   const resetGame = () => {
     setSelected(null);
     setAnswered(false);
     setIsCorrect(false);
+    wrongCountRef.current = 0;
+    startTime.current = Date.now();
+    hasCompleted.current = false;
   };
 
   return (

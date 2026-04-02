@@ -27,13 +27,18 @@ function shuffle<T>(arr: T[]): T[] {
 
 export default function GroupSort({ options, theme, onComplete }: GroupSortProps) {
   const startTime = useRef(Date.now());
+  const scoreRef = useRef({ correct: 0, wrong: 0 });
+  const hasCompleted = useRef(false);
   const groups = useMemo(() => {
     const set = new Set<string>();
     options.forEach((o) => { if (o.group) set.add(o.group); });
     return Array.from(set);
   }, [options]);
 
-  const shuffledItems = useMemo(() => shuffle(options), [options]);
+  const shuffledItems = useMemo(
+    () => shuffle(options.filter((o) => o.group)),
+    [options]
+  );
 
   const [remaining, setRemaining] = useState(shuffledItems);
   const [sorted, setSorted] = useState<Record<string, typeof options>>(() => {
@@ -53,7 +58,11 @@ export default function GroupSort({ options, theme, onComplete }: GroupSortProps
       if (item.group === targetGroup) {
         playCorrectSound();
         setFeedback({ itemId, correct: true });
-        setScore((s) => ({ ...s, correct: s.correct + 1 }));
+        setScore((s) => {
+          const next = { ...s, correct: s.correct + 1 };
+          scoreRef.current = next;
+          return next;
+        });
         setTimeout(() => {
           setRemaining((prev) => prev.filter((o) => o.id !== itemId));
           setSorted((prev) => ({
@@ -66,7 +75,11 @@ export default function GroupSort({ options, theme, onComplete }: GroupSortProps
       } else {
         playWrongSound();
         setFeedback({ itemId, correct: false });
-        setScore((s) => ({ ...s, wrong: s.wrong + 1 }));
+        setScore((s) => {
+          const next = { ...s, wrong: s.wrong + 1 };
+          scoreRef.current = next;
+          return next;
+        });
         setTimeout(() => {
           setFeedback(null);
         }, 600);
@@ -76,17 +89,19 @@ export default function GroupSort({ options, theme, onComplete }: GroupSortProps
   );
 
   useEffect(() => {
-    if (remaining.length === 0 && options.length > 0) {
+    if (remaining.length === 0 && options.length > 0 && !hasCompleted.current) {
+      hasCompleted.current = true;
+      const s = scoreRef.current;
       const stats: GameStats = {
         totalItems: options.length,
-        correctCount: score.correct,
-        wrongCount: score.wrong,
+        correctCount: s.correct,
+        wrongCount: s.wrong,
         timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
         completedAt: new Date().toISOString(),
       };
       setTimeout(() => onComplete(stats), 600);
     }
-  }, [remaining.length, options.length, onComplete, score]);
+  }, [remaining.length, options.length, onComplete]);
 
   const handleGroupClick = (group: string) => {
     if (!selectedItem) return;
@@ -94,13 +109,16 @@ export default function GroupSort({ options, theme, onComplete }: GroupSortProps
   };
 
   const resetGame = () => {
-    setRemaining(shuffle(options));
+    setRemaining(shuffle(options.filter((o) => o.group)));
     const init: Record<string, typeof options> = {};
     groups.forEach((g) => { init[g] = []; });
     setSorted(init);
     setFeedback(null);
     setSelectedItem(null);
     setScore({ correct: 0, wrong: 0 });
+    scoreRef.current = { correct: 0, wrong: 0 };
+    startTime.current = Date.now();
+    hasCompleted.current = false;
   };
 
   return (

@@ -3,20 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import type { Activity } from "@/types/activity";
 import { getTheme } from "@/lib/themes";
 import SpinningWheel from "@/components/SpinningWheel";
 import CardGrid from "@/components/CardGrid";
-
-const SpinningWheel3D = dynamic(() => import("@/components/SpinningWheel3D"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex items-center justify-center py-20">
-      <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#FFE8F5] border-t-[#FF6B9D]" />
-    </div>
-  ),
-});
 import CardStack from "@/components/CardStack";
 import MatchGame from "@/components/MatchGame";
 import GroupSort from "@/components/GroupSort";
@@ -27,6 +17,7 @@ import BalloonPop from "@/components/BalloonPop";
 import Celebration from "@/components/Celebration";
 import ResultsScreen from "@/components/ResultsScreen";
 import PrintView from "@/components/PrintView";
+import StartLiveSession from "@/components/StartLiveSession";
 import type { GameStats } from "@/types/game";
 
 export default function PlayPage() {
@@ -39,6 +30,7 @@ export default function PlayPage() {
   const [gameStats, setGameStats] = useState<GameStats | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
+  const [showLiveSession, setShowLiveSession] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -173,6 +165,17 @@ export default function PlayPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
             </svg>
           </button>
+          <button
+            type="button"
+            onClick={() => setShowLiveSession(true)}
+            className="flex h-10 items-center gap-1.5 rounded-xl bg-[#FF6B9D] px-3 text-sm font-bold text-white transition hover:scale-105 hover:bg-[#FF5A8A]"
+            title="Canlı Oturum Başlat"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <span className="hidden sm:inline">Canlı</span>
+          </button>
           <div className="flex items-center gap-2 rounded-full bg-[#F8F5FF] px-3 py-1.5 text-sm font-bold text-[#8B7BAD]" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
             <span>{theme.emoji}</span>
             <span className="hidden sm:inline">{theme.name}</span>
@@ -181,7 +184,7 @@ export default function PlayPage() {
       </div>
 
       {activity.type === "wheel" && (
-        <SpinningWheel3D
+        <SpinningWheel
           options={activity.options}
           theme={theme}
           onComplete={handleComplete}
@@ -276,6 +279,14 @@ export default function PlayPage() {
 
       {showPrint && activity && (
         <PrintView activity={activity} onClose={() => setShowPrint(false)} />
+      )}
+
+      {showLiveSession && activity && (
+        <StartLiveSession
+          activityId={activity.id}
+          activityTitle={activity.title}
+          onClose={() => setShowLiveSession(false)}
+        />
       )}
     </div>
   );

@@ -19,10 +19,13 @@ export interface QuizProps {
 
 export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
   const startTime = useRef(Date.now());
+  const scoreRef = useRef({ correct: 0, wrong: 0, total: 0 });
+  const hasCompletedRef = useRef(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [score, setScore] = useState({ correct: 0, wrong: 0, total: 0 });
+  const [attempts, setAttempts] = useState(0);
 
   // For multi-question support, track current question index
   // In current data model, one activity = one question
@@ -40,28 +43,35 @@ export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
 
       if (correct) {
         playCorrectSound();
-        setScore((s) => ({ ...s, correct: s.correct + 1, total: s.total + 1 }));
+        scoreRef.current = { ...scoreRef.current, correct: scoreRef.current.correct + 1, total: scoreRef.current.total + 1 };
+        setScore({ ...scoreRef.current });
       } else {
         playWrongSound();
-        setScore((s) => ({ ...s, wrong: s.wrong + 1, total: s.total + 1 }));
+        scoreRef.current = { ...scoreRef.current, wrong: scoreRef.current.wrong + 1, total: scoreRef.current.total + 1 };
+        setScore({ ...scoreRef.current });
+        setAttempts((a) => a + 1);
       }
     },
     [answered, options]
   );
 
   useEffect(() => {
-    if (answered && isCorrect) {
-      const stats: GameStats = {
-        totalItems: options.length,
-        correctCount: score.correct,
-        wrongCount: score.wrong,
-        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-        completedAt: new Date().toISOString(),
-      };
-      const t = setTimeout(() => onComplete(stats), 1500);
-      return () => clearTimeout(t);
-    }
-  }, [answered, isCorrect, onComplete, options.length, score]);
+    if (!answered || hasCompletedRef.current) return;
+
+    const shouldComplete = isCorrect || attempts >= 3;
+    if (!shouldComplete) return;
+
+    hasCompletedRef.current = true;
+    const stats: GameStats = {
+      totalItems: 1,
+      correctCount: scoreRef.current.correct,
+      wrongCount: scoreRef.current.wrong,
+      timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
+      completedAt: new Date().toISOString(),
+    };
+    const t = setTimeout(() => onComplete(stats), 1500);
+    return () => clearTimeout(t);
+  }, [answered, isCorrect, attempts, onComplete]);
 
   const getOptionStyle = (opt: { id: string; isCorrect?: boolean }) => {
     if (!answered) {
@@ -91,6 +101,7 @@ export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
     setAnswered(false);
     setIsCorrect(false);
     setScore({ correct: 0, wrong: 0, total: 0 });
+    startTime.current = Date.now();
   };
 
   return (
@@ -161,12 +172,12 @@ export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
               : "bg-rose-100 text-rose-700"
           }`}
         >
-          {isCorrect ? "Doğru! Harikasın! 🎉" : "Yanlış! Tekrar dene 💪"}
+          {isCorrect ? "Doğru! Harikasın! 🎉" : attempts >= 3 ? "Yanlış! Doğru cevap gösterildi." : "Yanlış! Tekrar dene 💪"}
         </motion.div>
       )}
 
       {/* Retry / Reset */}
-      {answered && !isCorrect && (
+      {answered && !isCorrect && attempts < 3 && (
         <button
           type="button"
           onClick={resetGame}

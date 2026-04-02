@@ -35,6 +35,8 @@ function shuffle<T>(arr: T[]): T[] {
 
 export default function MemoryGame({ options, theme, onComplete }: MemoryGameProps) {
   const startTime = useRef(Date.now());
+  const lockRef = useRef(false);
+  const hasCompleted = useRef(false);
   const cards = useMemo(() => {
     const pairs: MemoryCard[] = [];
     options.forEach((o) => {
@@ -51,6 +53,7 @@ export default function MemoryGame({ options, theme, onComplete }: MemoryGamePro
 
   const handleFlip = useCallback(
     (uid: string) => {
+      if (lockRef.current) return;
       if (checking) return;
       if (flipped.includes(uid)) return;
       if (matched.has(cards.find((c) => c.uid === uid)?.originalId || "")) return;
@@ -61,6 +64,7 @@ export default function MemoryGame({ options, theme, onComplete }: MemoryGamePro
       setFlipped(next);
 
       if (next.length === 2) {
+        lockRef.current = true;
         setMoves((m) => m + 1);
         setChecking(true);
         const card1 = cards.find((c) => c.uid === next[0]);
@@ -72,12 +76,14 @@ export default function MemoryGame({ options, theme, onComplete }: MemoryGamePro
             setMatched((prev) => new Set(prev).add(card1.originalId));
             setFlipped([]);
             setChecking(false);
+            lockRef.current = false;
           }, 500);
         } else {
           playWrongSound();
           setTimeout(() => {
             setFlipped([]);
             setChecking(false);
+            lockRef.current = false;
           }, 800);
         }
       }
@@ -86,7 +92,8 @@ export default function MemoryGame({ options, theme, onComplete }: MemoryGamePro
   );
 
   useEffect(() => {
-    if (matched.size === options.length && options.length > 0) {
+    if (matched.size === options.length && options.length > 0 && !hasCompleted.current) {
+      hasCompleted.current = true;
       const stats: GameStats = {
         totalItems: options.length,
         correctCount: matched.size,
@@ -103,9 +110,12 @@ export default function MemoryGame({ options, theme, onComplete }: MemoryGamePro
     setMatched(new Set());
     setChecking(false);
     setMoves(0);
+    startTime.current = Date.now();
+    hasCompleted.current = false;
+    lockRef.current = false;
   };
 
-  const cols = cards.length <= 8 ? 4 : cards.length <= 12 ? 4 : cards.length <= 16 ? 4 : 5;
+  const cols = cards.length <= 8 ? 3 : cards.length <= 16 ? 4 : 5;
 
   return (
     <div className="flex flex-col items-center gap-6 px-3 py-6 md:px-6" style={{ backgroundColor: theme.backgroundColor }}>

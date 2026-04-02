@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { playCorrectSound, playWrongSound, playMatchSound } from "@/lib/sounds";
+import { playWrongSound, playMatchSound } from "@/lib/sounds";
 import type { GameStats } from "@/types/game";
 
 export interface MatchGameProps {
@@ -33,26 +33,41 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+function buildRightItems(options: MatchGameProps["options"]): MatchItem[] {
+  return shuffle(
+    options.map((o) => ({
+      id: `right-${o.id}`,
+      originalId: o.id,
+      side: "right" as const,
+      text: o.pairText || o.text,
+      imageUrl: o.pairImageUrl || o.imageUrl,
+    }))
+  );
+}
+
 export default function MatchGame({ options, theme, onComplete }: MatchGameProps) {
   const startTime = useRef(Date.now());
-  const { leftItems, rightItems } = useMemo(() => {
-    const left: MatchItem[] = options.map((o) => ({
-      id: `left-${o.id}`,
-      originalId: o.id,
-      side: "left" as const,
-      text: o.text,
-      imageUrl: o.imageUrl,
-    }));
-    const right: MatchItem[] = shuffle(
+  const scoreRef = useRef({ correct: 0, wrong: 0 });
+  const hasCompleted = useRef(false);
+  const wrongPairTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const leftItems = useMemo<MatchItem[]>(
+    () =>
       options.map((o) => ({
-        id: `right-${o.id}`,
+        id: `left-${o.id}`,
         originalId: o.id,
-        side: "right" as const,
-        text: o.pairText || o.text,
-        imageUrl: o.pairImageUrl || o.imageUrl,
-      }))
-    );
-    return { leftItems: left, rightItems: right };
+        side: "left" as const,
+        text: o.text,
+        imageUrl: o.imageUrl,
+      })),
+    [options]
+  );
+
+  const [rightItems, setRightItems] = useState<MatchItem[]>(() => buildRightItems(options));
+
+  // Re-build right items when options change (e.g. new game loaded)
+  useEffect(() => {
+    setRightItems(buildRightItems(options));
   }, [options]);
 
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
@@ -61,6 +76,15 @@ export default function MatchGame({ options, theme, onComplete }: MatchGameProps
   const [wrongPair, setWrongPair] = useState<{ left: string; right: string } | null>(null);
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
 
+  // Clean up wrongPair timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (wrongPairTimeoutRef.current) {
+        clearTimeout(wrongPairTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const checkMatch = useCallback(
     (leftId: string, rightId: string) => {
       const leftItem = leftItems.find((i) => i.id === leftId);
@@ -68,20 +92,22 @@ export default function MatchGame({ options, theme, onComplete }: MatchGameProps
       if (!leftItem || !rightItem) return;
 
       if (leftItem.originalId === rightItem.originalId) {
-        playCorrectSound();
         playMatchSound();
         setMatched((prev) => new Set(prev).add(leftItem.originalId));
-        setScore((s) => ({ ...s, correct: s.correct + 1 }));
+        scoreRef.current = { ...scoreRef.current, correct: scoreRef.current.correct + 1 };
+        setScore({ ...scoreRef.current });
         setSelectedLeft(null);
         setSelectedRight(null);
       } else {
         playWrongSound();
         setWrongPair({ left: leftId, right: rightId });
-        setScore((s) => ({ ...s, wrong: s.wrong + 1 }));
-        setTimeout(() => {
+        scoreRef.current = { ...scoreRef.current, wrong: scoreRef.current.wrong + 1 };
+        setScore({ ...scoreRef.current });
+        wrongPairTimeoutRef.current = setTimeout(() => {
           setWrongPair(null);
           setSelectedLeft(null);
           setSelectedRight(null);
+          wrongPairTimeoutRef.current = null;
         }, 600);
       }
     },
@@ -95,17 +121,18 @@ export default function MatchGame({ options, theme, onComplete }: MatchGameProps
   }, [selectedLeft, selectedRight, checkMatch]);
 
   useEffect(() => {
-    if (matched.size === options.length && options.length > 0) {
+    if (matched.size === options.length && options.length > 0 && !hasCompleted.current) {
+      hasCompleted.current = true;
       const stats: GameStats = {
         totalItems: options.length,
-        correctCount: score.correct,
-        wrongCount: score.wrong,
+        correctCount: matched.size,
+        wrongCount: scoreRef.current.wrong,
         timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
         completedAt: new Date().toISOString(),
       };
       setTimeout(() => onComplete(stats), 500);
     }
-  }, [matched.size, options.length, onComplete, score]);
+  }, [matched.size, options.length, onComplete]);
 
   const handleSelect = (item: MatchItem) => {
     if (matched.has(item.originalId)) return;
@@ -135,11 +162,19 @@ export default function MatchGame({ options, theme, onComplete }: MatchGameProps
   };
 
   const resetGame = () => {
+    if (wrongPairTimeoutRef.current) {
+      clearTimeout(wrongPairTimeoutRef.current);
+      wrongPairTimeoutRef.current = null;
+    }
     setSelectedLeft(null);
     setSelectedRight(null);
     setMatched(new Set());
     setWrongPair(null);
+    scoreRef.current = { correct: 0, wrong: 0 };
     setScore({ correct: 0, wrong: 0 });
+    setRightItems(buildRightItems(options));
+    startTime.current = Date.now();
+    hasCompleted.current = false;
   };
 
   return (

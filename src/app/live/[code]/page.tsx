@@ -12,27 +12,30 @@ export default function LiveSessionPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check localStorage for session data
-    const sessionData = localStorage.getItem(`live-session-${code}`);
-    if (sessionData) {
+    async function fetchSession() {
       try {
-        const parsed = JSON.parse(sessionData);
-        if (parsed.activityId) {
-          // Fetch the activity
-          fetch(`/api/activities/${parsed.activityId}`)
-            .then((res) => res.ok ? res.json() : Promise.reject())
-            .then((data) => setActivity(data))
-            .catch(() => setError("Etkinlik bulunamadı."));
-        } else {
-          setError("Geçersiz seans.");
+        const res = await fetch(`/api/live-sessions/${code}`);
+        if (res.status === 404) {
+          setError("Bu kodla aktif bir seans bulunamadı.");
+          return;
         }
+        if (res.status === 410) {
+          setError("Bu seansın süresi dolmuş.");
+          return;
+        }
+        if (!res.ok) {
+          setError("Seans bilgisi alınırken bir hata oluştu.");
+          return;
+        }
+        const data = await res.json();
+        setActivity(data.activity);
       } catch {
-        setError("Seans verisi okunamadı.");
+        setError("Bağlantı hatası. Lütfen tekrar deneyin.");
+      } finally {
+        setLoading(false);
       }
-    } else {
-      setError("Bu kodla bir seans bulunamadı. Seans sahibiyle aynı cihazda olmanız gerekiyor (şimdilik).");
     }
-    setLoading(false);
+    fetchSession();
   }, [code]);
 
   if (loading) {
@@ -49,14 +52,13 @@ export default function LiveSessionPage() {
         <div className="max-w-sm rounded-3xl bg-white p-8 text-center shadow-xl" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
           <div className="mb-4 text-5xl">😕</div>
           <h1 className="font-heading text-xl font-bold text-[#2D1B69] mb-2">{error || "Seans bulunamadı"}</h1>
-          <p className="text-sm text-[#8B7BAD] mb-6">Supabase entegrasyonu sonrasında farklı cihazlardan katılım mümkün olacak.</p>
+          <p className="text-sm text-[#8B7BAD] mb-6">Kod doğru olduğundan ve seansın hâlâ aktif olduğundan emin olun.</p>
           <Link href="/live" className="btn-candy inline-flex px-8 py-3 text-base">Geri Dön</Link>
         </div>
       </div>
     );
   }
 
-  // Redirect to play page for now
   return (
     <div className="flex min-h-screen items-center justify-center" style={{ background: "linear-gradient(135deg, #FFF8F0, #FFE8F5)" }}>
       <div className="max-w-sm rounded-3xl bg-white p-8 text-center shadow-xl" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>

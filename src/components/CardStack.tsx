@@ -61,6 +61,7 @@ export default function CardStack({ options, theme, onComplete }: CardStackProps
 
   useEffect(() => {
     completedRef.current = false;
+    startTime.current = Date.now();
     setOpenedIds(new Set());
     setCurrentOpenId(null);
     setFlipOpen(false);
@@ -95,6 +96,7 @@ export default function CardStack({ options, theme, onComplete }: CardStackProps
 
   const handleRestart = useCallback(() => {
     completedRef.current = false;
+    startTime.current = Date.now();
     setOrderedIds((prev) => restartOrder(prev, openedIds));
     setOpenedIds(new Set());
     setCurrentOpenId(null);

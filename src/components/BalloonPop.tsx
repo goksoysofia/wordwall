@@ -17,10 +17,6 @@ export interface BalloonPopProps {
   onComplete: (stats: GameStats) => void;
 }
 
-const BALLOON_SHAPES = [
-  "M50,15 C50,5 65,0 70,10 C80,5 90,15 85,25 C95,30 90,45 80,45 C85,55 70,65 60,60 C50,70 35,60 35,50 C25,55 15,45 20,35 C10,30 15,15 30,15 C30,5 45,5 50,15 Z",
-];
-
 interface BalloonData {
   id: string;
   originalId: string;
@@ -45,21 +41,39 @@ function shuffle<T>(arr: T[]): T[] {
 
 export default function BalloonPop({ options, title, theme, onComplete }: BalloonPopProps) {
   const startTime = useRef(Date.now());
+  const hasCompletedRef = useRef(false);
+  const scoreRef = useRef({ correct: 0, wrong: 0 });
+
+  // Stable random values per option id, stored in a ref so they don't change on re-render
+  const randomsRef = useRef<Map<string, { yOffset: number; floatRange: number }>>(new Map());
+  const getRandoms = (id: string) => {
+    if (!randomsRef.current.has(id)) {
+      randomsRef.current.set(id, {
+        yOffset: Math.random() * 10,
+        floatRange: 8 + Math.random() * 8,
+      });
+    }
+    return randomsRef.current.get(id)!;
+  };
+
   const balloons = useMemo(() => {
     const cols = Math.min(options.length, 4);
     return shuffle(
-      options.map((o, i) => ({
-        id: o.id,
-        originalId: o.id,
-        text: o.text,
-        imageUrl: o.imageUrl,
-        isCorrect: o.isCorrect === true,
-        color: theme.cardColors[i % theme.cardColors.length],
-        x: ((i % cols) + 0.5) * (100 / cols),
-        y: 20 + Math.floor(i / cols) * 35 + Math.random() * 10,
-        delay: i * 0.15,
-        floatRange: 8 + Math.random() * 8,
-      }))
+      options.map((o, i) => {
+        const rng = getRandoms(o.id);
+        return {
+          id: o.id,
+          originalId: o.id,
+          text: o.text,
+          imageUrl: o.imageUrl,
+          isCorrect: o.isCorrect === true,
+          color: theme.cardColors[i % theme.cardColors.length],
+          x: ((i % cols) + 0.5) * (100 / cols),
+          y: 20 + Math.floor(i / cols) * 35 + rng.yOffset,
+          delay: i * 0.15,
+          floatRange: rng.floatRange,
+        };
+      })
     );
   }, [options, theme.cardColors]);
 
@@ -81,10 +95,18 @@ export default function BalloonPop({ options, title, theme, onComplete }: Balloo
 
       if (balloon.isCorrect) {
         playCorrectSound();
-        setScore((s) => ({ ...s, correct: s.correct + 1 }));
+        setScore((s) => {
+          const next = { ...s, correct: s.correct + 1 };
+          scoreRef.current = next;
+          return next;
+        });
       } else {
         playWrongSound();
-        setScore((s) => ({ ...s, wrong: s.wrong + 1 }));
+        setScore((s) => {
+          const next = { ...s, wrong: s.wrong + 1 };
+          scoreRef.current = next;
+          return next;
+        });
       }
 
       setTimeout(() => {
@@ -95,22 +117,29 @@ export default function BalloonPop({ options, title, theme, onComplete }: Balloo
   );
 
   useEffect(() => {
-    if (score.correct >= correctCount && correctCount > 0) {
-      const stats: GameStats = {
-        totalItems: options.length,
-        correctCount: score.correct,
-        wrongCount: score.wrong,
-        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-        completedAt: new Date().toISOString(),
-      };
-      setTimeout(() => onComplete(stats), 800);
+    if (score.correct >= correctCount && correctCount > 0 && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
+      setTimeout(() => {
+        const s = scoreRef.current;
+        const stats: GameStats = {
+          totalItems: options.length,
+          correctCount: s.correct,
+          wrongCount: s.wrong,
+          timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
+          completedAt: new Date().toISOString(),
+        };
+        onComplete(stats);
+      }, 800);
     }
-  }, [score.correct, score.wrong, correctCount, onComplete, options.length]);
+  }, [score.correct, correctCount, onComplete, options.length]);
 
   const resetGame = () => {
     setPopped(new Set());
     setPopEffects([]);
     setScore({ correct: 0, wrong: 0 });
+    scoreRef.current = { correct: 0, wrong: 0 };
+    hasCompletedRef.current = false;
+    startTime.current = Date.now();
   };
 
   return (

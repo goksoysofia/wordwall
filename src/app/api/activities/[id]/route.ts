@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+async function getUserFromRequest(request: NextRequest) {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+
+  const token = authHeader.slice(7);
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !user) return null;
+  return user;
+}
 
 export async function GET(
   _request: NextRequest,
@@ -12,7 +22,7 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("activities")
     .select("*")
     .eq("id", id)
@@ -30,16 +40,34 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+  }
+
+  // Verify ownership
+  const { data: existing } = await supabaseAdmin
+    .from("activities")
+    .select("user_id")
+    .eq("id", id)
+    .single();
+
+  if (existing?.user_id && existing.user_id !== user.id) {
+    return NextResponse.json({ error: "Bu etkinliği düzenleme yetkiniz yok." }, { status: 403 });
+  }
+
   const body = await request.json();
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("activities")
     .update({
       title: body.title,
       type: body.type,
       display_mode: body.display_mode,
       theme: body.theme,
+      category: body.category || null,
       options: body.options,
+      is_public: body.is_public,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
@@ -54,12 +82,27 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+  }
 
-  const { error } = await supabase
+  // Verify ownership
+  const { data: existing } = await supabaseAdmin
+    .from("activities")
+    .select("user_id")
+    .eq("id", id)
+    .single();
+
+  if (existing?.user_id && existing.user_id !== user.id) {
+    return NextResponse.json({ error: "Bu etkinliği silme yetkiniz yok." }, { status: 403 });
+  }
+
+  const { error } = await supabaseAdmin
     .from("activities")
     .delete()
     .eq("id", id);

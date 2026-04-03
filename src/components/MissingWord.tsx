@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { playCorrectSound, playWrongSound } from "@/lib/sounds";
 import type { GameStats } from "@/types/game";
+import ThemedBackground from "@/components/ThemedBackground";
 
 export interface MissingWordProps {
   options: { id: string; text?: string; isCorrect?: boolean }[];
@@ -11,6 +12,7 @@ export interface MissingWordProps {
   theme: {
     backgroundColor: string;
     cardColors: string[];
+    decorEmojis: string[];
     celebrationText: string;
     emoji: string;
   };
@@ -82,7 +84,8 @@ export default function MissingWord({ options, title, theme, onComplete }: Missi
   };
 
   return (
-    <div className="flex flex-col items-center gap-8 px-3 py-8 md:px-6" style={{ backgroundColor: theme.backgroundColor }}>
+    <div className="relative flex flex-col items-center gap-8 px-3 py-8 md:px-6" style={{ backgroundColor: theme.backgroundColor }}>
+      <ThemedBackground decorEmojis={theme.decorEmojis} backgroundColor={theme.backgroundColor} />
       {/* Sentence Card */}
       <motion.div
         className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl sm:p-8"

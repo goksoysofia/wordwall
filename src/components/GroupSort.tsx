@@ -4,12 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playCorrectSound, playWrongSound } from "@/lib/sounds";
 import type { GameStats } from "@/types/game";
+import ThemedBackground from "@/components/ThemedBackground";
 
 export interface GroupSortProps {
   options: { id: string; text?: string; imageUrl?: string; group?: string }[];
   theme: {
     backgroundColor: string;
     cardColors: string[];
+    decorEmojis: string[];
     celebrationText: string;
     emoji: string;
   };
@@ -122,7 +124,8 @@ export default function GroupSort({ options, theme, onComplete }: GroupSortProps
   };
 
   return (
-    <div className="flex flex-col items-center gap-6 px-3 py-6 md:px-6" style={{ backgroundColor: theme.backgroundColor }}>
+    <div className="relative flex flex-col items-center gap-6 px-3 py-6 md:px-6" style={{ backgroundColor: theme.backgroundColor }}>
+      <ThemedBackground decorEmojis={theme.decorEmojis} backgroundColor={theme.backgroundColor} />
       {/* Score */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
@@ -147,11 +150,11 @@ export default function GroupSort({ options, theme, onComplete }: GroupSortProps
 
       {/* Unsorted Items */}
       {remaining.length > 0 && (
-        <div className="w-full max-w-2xl">
-          <div className="mb-2 text-center text-xs font-bold uppercase tracking-wider text-[#8B7BAD]">
+        <div className="w-full max-w-3xl">
+          <div className="mb-3 text-center text-xs font-bold uppercase tracking-wider text-[#8B7BAD]">
             Yerleştirilecekler ({remaining.length})
           </div>
-          <div className="flex flex-wrap justify-center gap-2.5">
+          <div className="flex flex-wrap justify-center gap-3">
             <AnimatePresence>
               {remaining.map((item) => {
                 const isSelected = selectedItem === item.id;
@@ -161,8 +164,9 @@ export default function GroupSort({ options, theme, onComplete }: GroupSortProps
                     key={item.id}
                     type="button"
                     onClick={() => setSelectedItem(isSelected ? null : item.id)}
-                    className="flex items-center gap-2 rounded-2xl px-4 py-3 text-left transition-all duration-200"
+                    className="flex flex-col items-center overflow-hidden rounded-2xl transition-all duration-200"
                     style={{
+                      width: item.imageUrl ? 130 : undefined,
                       border: fb
                         ? fb.correct
                           ? "3px solid #22c55e"
@@ -178,6 +182,7 @@ export default function GroupSort({ options, theme, onComplete }: GroupSortProps
                           ? "#eef2ff"
                           : "white",
                       transform: isSelected ? "scale(1.05)" : undefined,
+                      boxShadow: isSelected ? "0 8px 24px rgba(99,102,241,0.25)" : "0 2px 8px rgba(0,0,0,0.06)",
                     }}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{
@@ -187,12 +192,20 @@ export default function GroupSort({ options, theme, onComplete }: GroupSortProps
                     exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.3 } }}
                     layout
                   >
-                    {item.imageUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.imageUrl} alt="" className="h-10 w-10 rounded-xl object-cover" />
-                    )}
-                    {item.text && (
-                      <span className="font-heading text-sm font-bold text-[#2D1B69]">{item.text}</span>
+                    {item.imageUrl ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={item.imageUrl} alt="" className="h-28 w-full object-cover sm:h-32" />
+                        {item.text && (
+                          <span className="w-full truncate px-2 py-2 text-center font-heading text-sm font-bold text-[#2D1B69]">
+                            {item.text}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="px-5 py-3 font-heading text-sm font-bold text-[#2D1B69]">
+                        {item.text}
+                      </span>
                     )}
                   </motion.button>
                 );
@@ -203,7 +216,7 @@ export default function GroupSort({ options, theme, onComplete }: GroupSortProps
       )}
 
       {/* Group Buckets */}
-      <div className="grid w-full max-w-2xl gap-4" style={{ gridTemplateColumns: `repeat(${Math.min(groups.length, 3)}, 1fr)` }}>
+      <div className="grid w-full max-w-3xl gap-5" style={{ gridTemplateColumns: `repeat(${Math.min(groups.length, 3)}, 1fr)` }}>
         {groups.map((group, gi) => {
           const color = theme.cardColors[gi % theme.cardColors.length];
           const items = sorted[group] || [];
@@ -213,43 +226,56 @@ export default function GroupSort({ options, theme, onComplete }: GroupSortProps
               type="button"
               onClick={() => handleGroupClick(group)}
               disabled={!selectedItem}
-              className="flex flex-col items-center rounded-3xl p-4 transition-all duration-200 hover:shadow-lg disabled:cursor-default"
+              className="flex flex-col items-center rounded-3xl p-4 transition-all duration-200 disabled:cursor-default"
               style={{
-                background: `${color}15`,
-                border: `3px dashed ${color}60`,
-                minHeight: 140,
+                background: `${color}18`,
+                border: selectedItem ? `3px dashed ${color}` : `3px dashed ${color}50`,
+                minHeight: 160,
+                boxShadow: selectedItem ? `0 4px 20px ${color}30` : undefined,
               }}
-              whileHover={selectedItem ? { scale: 1.02, borderStyle: "solid" } : undefined}
-              whileTap={selectedItem ? { scale: 0.98 } : undefined}
+              whileHover={selectedItem ? { scale: 1.03, borderStyle: "solid" } : undefined}
+              whileTap={selectedItem ? { scale: 0.97 } : undefined}
             >
+              {/* Group title */}
               <div
-                className="mb-3 rounded-2xl px-4 py-2 font-heading text-sm font-bold text-white shadow-sm"
-                style={{ background: color }}
+                className="mb-4 rounded-2xl px-6 py-2.5 font-heading text-base font-extrabold tracking-wide text-white shadow-lg sm:text-lg"
+                style={{
+                  background: `linear-gradient(135deg, ${color}, ${color}DD)`,
+                  boxShadow: `0 4px 14px ${color}50`,
+                }}
               >
                 {group}
               </div>
-              <div className="flex flex-wrap justify-center gap-1.5">
+              <div className="flex flex-wrap justify-center gap-2">
                 <AnimatePresence>
                   {items.map((item) => (
                     <motion.div
                       key={item.id}
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-[#2D1B69] shadow-sm"
-                      style={{ border: `2px solid ${color}30` }}
+                      className="flex flex-col items-center overflow-hidden rounded-xl bg-white shadow-sm"
+                      style={{ border: `2px solid ${color}30`, width: item.imageUrl ? 90 : undefined }}
                     >
-                      {item.imageUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.imageUrl} alt="" className="h-6 w-6 rounded-lg object-cover" />
+                      {item.imageUrl ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={item.imageUrl} alt="" className="h-16 w-full object-cover sm:h-20" />
+                          {item.text && (
+                            <span className="w-full truncate px-1.5 py-1 text-center text-[11px] font-bold text-[#2D1B69]">
+                              {item.text}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="px-3 py-1.5 text-xs font-bold text-[#2D1B69]">{item.text}</span>
                       )}
-                      {item.text && <span>{item.text}</span>}
                     </motion.div>
                   ))}
                 </AnimatePresence>
               </div>
               {items.length === 0 && (
-                <p className="mt-2 text-xs font-semibold text-[#C5B8DB]">
-                  Buraya bırak
+                <p className="mt-3 text-sm font-semibold text-[#C5B8DB]">
+                  Buraya yerleştir
                 </p>
               )}
             </motion.button>

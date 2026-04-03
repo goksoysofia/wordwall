@@ -6,11 +6,25 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+async function getUserFromRequest(request: NextRequest) {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+
+  const token = authHeader.slice(7);
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return null;
+  return user;
+}
+
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+  }
 
   const { data: template, error: fetchError } = await supabase
     .from("templates")
@@ -30,6 +44,8 @@ export async function POST(
       display_mode: template.display_mode,
       theme: template.theme,
       options: template.options,
+      user_id: user.id,
+      is_public: true,
     })
     .select()
     .single();

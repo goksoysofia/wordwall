@@ -1,6 +1,21 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
 
 export default function LandingPage() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const nb = document.getElementById('l-navbar');
+    if (!nb) return;
+    const onScroll = () => nb.classList.toggle('scrolled', window.scrollY > 50);
+    onScroll();
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     <>
       <style>{`
@@ -304,7 +319,11 @@ export default function LandingPage() {
         {/* NAV */}
         <nav className="l-nav" id="l-navbar">
           <div className="l-logo">Wordwall</div>
-          <Link href="/dashboard" className="l-nav-cta">Hemen Dene</Link>
+          {user ? (
+            <Link href="/dashboard" className="l-nav-cta">Panelim</Link>
+          ) : (
+            <Link href="/login" className="l-nav-cta">Giriş Yap</Link>
+          )}
         </nav>
 
         {/* HERO */}
@@ -458,8 +477,8 @@ export default function LandingPage() {
 
           <div className="l-tw">
             <div className="l-tt">
-              {[0, 1].map((rep) => (
-                <span key={rep}>{[
+              {[0, 1].flatMap((rep) =>
+                [
                   {bg: 'linear-gradient(135deg, #FF6B6B, #ee5a24)', e: '🍎', n: 'Meyveler'},
                   {bg: 'linear-gradient(135deg, #6BCB77, #2ecc71)', e: '🐄', n: 'Sevimli Çiftlik'},
                   {bg: 'linear-gradient(135deg, #4D96FF, #3742fa)', e: '🚗', n: 'Hızlı Arabalar'},
@@ -469,13 +488,13 @@ export default function LandingPage() {
                   {bg: 'linear-gradient(135deg, #0984e3, #00b894)', e: '🐳', n: 'Okyanus'},
                   {bg: 'linear-gradient(135deg, #fd79a8, #e84393)', e: '🦄', n: 'Peri Masalı'},
                   {bg: 'linear-gradient(135deg, #fdcb6e, #e17055)', e: '🏴‍☠️', n: 'Hazine Avı'},
-                  {bg: 'linear-gradient(135deg, #a29bfe, #6c5ce7)', e: '🎭', n: 'Yaratıcı Sahne'},
+                  {bg: 'linear-gradient(135deg, #78909C, #546E7A)', e: '⬜', n: 'Sade'},
                 ].map((t, i) => (
                   <div key={`${rep}-${i}`} className="l-tp" style={{background: t.bg}}>
                     <span>{t.e}</span> {t.n}
                   </div>
-                ))}</span>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </section>
@@ -502,9 +521,9 @@ export default function LandingPage() {
         <section className="l-cta">
           <div className="l-cbox">
             <h2>Hemen Başlayın</h2>
-            <p>İlk aktivitenizi oluşturmak birkaç dakika sürer. Kayıt gerekmez, hemen deneyin.</p>
-            <Link href="/dashboard" className="l-btn-cta">
-              Aktivite Oluştur
+            <p>İlk aktivitenizi oluşturmak birkaç dakika sürer. Google hesabınızla giriş yapın ve başlayın.</p>
+            <Link href={user ? "/dashboard" : "/login"} className="l-btn-cta">
+              {user ? "Panelime Git" : "Giriş Yap ve Başla"}
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
                 <path d="M5 11h12m0 0l-4-4m4 4l-4 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -518,14 +537,6 @@ export default function LandingPage() {
         </footer>
       </div>
 
-      <script dangerouslySetInnerHTML={{__html: `
-        if (typeof window !== 'undefined') {
-          var nb = document.getElementById('l-navbar');
-          if (nb) window.addEventListener('scroll', function() {
-            nb.classList.toggle('scrolled', window.scrollY > 50);
-          });
-        }
-      `}} />
     </>
   );
 }

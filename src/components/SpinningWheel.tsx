@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { playTickSound, playWheelStopSound } from "@/lib/sounds";
 import type { GameStats } from "@/types/game";
+import ThemedBackground from "@/components/ThemedBackground";
 
 export interface SpinningWheelProps {
   options: { id: string; text?: string; imageUrl?: string }[];
@@ -12,6 +13,7 @@ export interface SpinningWheelProps {
     emoji: string;
     backgroundColor: string;
     wheelColors: string[];
+    decorEmojis: string[];
     celebrationText: string;
   };
   onComplete: (stats: GameStats) => void;
@@ -221,9 +223,10 @@ export default function SpinningWheel({
 
   return (
     <div
-      className="flex w-full flex-col items-center gap-6 px-3 py-6 md:px-4"
+      className="relative flex w-full flex-col items-center gap-6 px-3 py-6 md:px-4"
       style={{ backgroundColor: theme.backgroundColor }}
     >
+      <ThemedBackground decorEmojis={theme.decorEmojis} backgroundColor={theme.backgroundColor} />
       <div className="relative w-full max-w-[min(100%,520px)] aspect-square">
         {/* Pointer */}
         <div

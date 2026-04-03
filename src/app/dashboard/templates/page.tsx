@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import type { Template, TemplateCategory, TemplateSource } from "@/types/template";
 import { TEMPLATE_CATEGORIES } from "@/types/template";
 import { getTheme } from "@/lib/themes";
+import { useAuth } from "@/lib/auth-context";
+import { authFetch } from "@/lib/auth-fetch";
 
 const ACTIVITY_TYPE_LABELS: Record<string, { icon: string; label: string }> = {
   wheel: { icon: "🎡", label: "Çark" },
@@ -20,6 +22,7 @@ const ACTIVITY_TYPE_LABELS: Record<string, { icon: string; label: string }> = {
 
 export default function TemplatesPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +31,12 @@ export default function TemplatesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sort, setSort] = useState<"popular" | "newest">("popular");
   const [usingId, setUsingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login?redirect=/dashboard/templates");
+    }
+  }, [authLoading, user, router]);
 
   const loadTemplates = useCallback(async () => {
     setError(null);
@@ -60,7 +69,7 @@ export default function TemplatesPage() {
   const handleUse = async (templateId: string) => {
     setUsingId(templateId);
     try {
-      const res = await fetch(`/api/templates/${templateId}/use`, { method: "POST" });
+      const res = await authFetch(`/api/templates/${templateId}/use`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || "Şablon kullanılamadı.");

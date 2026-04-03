@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { playCardOpenSound } from "@/lib/sounds";
 import type { GameStats } from "@/types/game";
+import ThemedBackground from "@/components/ThemedBackground";
 
 export interface CardGridProps {
   options: { id: string; text?: string; imageUrl?: string }[];
@@ -14,6 +15,7 @@ export interface CardGridProps {
     backgroundColor: string;
     cardColors: string[];
     cardFrontEmojis: string[];
+    decorEmojis: string[];
     celebrationText: string;
   };
   onComplete: (stats: GameStats) => void;
@@ -112,9 +114,10 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
 
   return (
     <div
-      className="min-h-[100dvh] w-full px-3 py-6 pb-28 md:px-6 md:py-8"
+      className="relative min-h-[100dvh] w-full px-3 py-6 pb-28 md:px-6 md:py-8"
       style={{ backgroundColor: theme.backgroundColor }}
     >
+      <ThemedBackground decorEmojis={theme.decorEmojis} backgroundColor={theme.backgroundColor} />
       <div
         className="mx-auto w-full max-w-6xl"
         style={

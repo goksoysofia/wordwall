@@ -4,12 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playWrongSound, playMatchSound } from "@/lib/sounds";
 import type { GameStats } from "@/types/game";
+import ThemedBackground from "@/components/ThemedBackground";
 
 export interface MatchGameProps {
   options: { id: string; text?: string; imageUrl?: string; pairText?: string; pairImageUrl?: string }[];
   theme: {
     backgroundColor: string;
     cardColors: string[];
+    decorEmojis: string[];
     celebrationText: string;
     emoji: string;
   };
@@ -178,7 +180,8 @@ export default function MatchGame({ options, theme, onComplete }: MatchGameProps
   };
 
   return (
-    <div className="flex flex-col items-center gap-6 px-3 py-6 md:px-6" style={{ backgroundColor: theme.backgroundColor }}>
+    <div className="relative flex flex-col items-center gap-6 px-3 py-6 md:px-6" style={{ backgroundColor: theme.backgroundColor }}>
+      <ThemedBackground decorEmojis={theme.decorEmojis} backgroundColor={theme.backgroundColor} />
       {/* Score */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>

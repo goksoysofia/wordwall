@@ -4,6 +4,8 @@ import { useState } from "react";
 import type { Activity } from "@/types/activity";
 import type { TemplateCategory } from "@/types/template";
 import { TEMPLATE_CATEGORIES } from "@/types/template";
+import { useAuth } from "@/lib/auth-context";
+import { authFetch } from "@/lib/auth-fetch";
 
 interface ShareTemplateModalProps {
   activity: Activity;
@@ -12,11 +14,12 @@ interface ShareTemplateModalProps {
 }
 
 export default function ShareTemplateModal({ activity, onClose, onSuccess }: ShareTemplateModalProps) {
+  const { user } = useAuth();
   const [title, setTitle] = useState(activity.title);
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<TemplateCategory>("diger");
   const [tagsInput, setTagsInput] = useState("");
-  const [authorName, setAuthorName] = useState("");
+  const [authorName, setAuthorName] = useState(user?.user_metadata?.full_name || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +37,7 @@ export default function ShareTemplateModal({ activity, onClose, onSuccess }: Sha
         .map((t) => t.trim().toLowerCase())
         .filter(Boolean);
 
-      const res = await fetch("/api/templates", {
+      const res = await authFetch("/api/templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

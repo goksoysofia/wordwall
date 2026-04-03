@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playPopSound, playCorrectSound, playWrongSound } from "@/lib/sounds";
 import type { GameStats } from "@/types/game";
+import ThemedBackground from "@/components/ThemedBackground";
 
 export interface BalloonPopProps {
   options: { id: string; text?: string; imageUrl?: string; isCorrect?: boolean }[];
@@ -11,6 +12,7 @@ export interface BalloonPopProps {
   theme: {
     backgroundColor: string;
     cardColors: string[];
+    decorEmojis: string[];
     celebrationText: string;
     emoji: string;
   };
@@ -56,8 +58,20 @@ export default function BalloonPop({ options, title, theme, onComplete }: Balloo
     return randomsRef.current.get(id)!;
   };
 
+  // Dynamic balloon size based on option count
+  const balloonSize = useMemo(() => {
+    const count = options.length;
+    if (count <= 2) return { width: 140, height: 175, fontSize: 18, fontSizeSmall: 14, truncate: 16, imgSize: "h-14 w-14" };
+    if (count <= 4) return { width: 120, height: 150, fontSize: 16, fontSizeSmall: 12, truncate: 14, imgSize: "h-12 w-12" };
+    if (count <= 6) return { width: 100, height: 125, fontSize: 14, fontSizeSmall: 11, truncate: 13, imgSize: "h-11 w-11" };
+    if (count <= 8) return { width: 90, height: 112, fontSize: 13, fontSizeSmall: 10, truncate: 12, imgSize: "h-10 w-10" };
+    return { width: 70, height: 88, fontSize: 10, fontSizeSmall: 8, truncate: 11, imgSize: "h-8 w-8" };
+  }, [options.length]);
+
   const balloons = useMemo(() => {
-    const cols = Math.min(options.length, 4);
+    const count = options.length;
+    const cols = count <= 2 ? 2 : count <= 4 ? 2 : count <= 6 ? 3 : Math.min(count, 4);
+    const rowGap = count <= 4 ? 40 : count <= 6 ? 32 : 28;
     return shuffle(
       options.map((o, i) => {
         const rng = getRandoms(o.id);
@@ -69,7 +83,7 @@ export default function BalloonPop({ options, title, theme, onComplete }: Balloo
           isCorrect: o.isCorrect === true,
           color: theme.cardColors[i % theme.cardColors.length],
           x: ((i % cols) + 0.5) * (100 / cols),
-          y: 20 + Math.floor(i / cols) * 35 + rng.yOffset,
+          y: 15 + Math.floor(i / cols) * rowGap + rng.yOffset,
           delay: i * 0.15,
           floatRange: rng.floatRange,
         };
@@ -143,7 +157,8 @@ export default function BalloonPop({ options, title, theme, onComplete }: Balloo
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 px-3 py-6 md:px-6" style={{ backgroundColor: theme.backgroundColor }}>
+    <div className="relative flex flex-col items-center gap-4 px-3 py-6 md:px-6" style={{ backgroundColor: theme.backgroundColor }}>
+      <ThemedBackground decorEmojis={theme.decorEmojis} backgroundColor={theme.backgroundColor} />
       {/* Score */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
@@ -236,7 +251,7 @@ export default function BalloonPop({ options, title, theme, onComplete }: Balloo
                 whileTap={{ scale: 0.9 }}
               >
                 {/* Balloon SVG */}
-                <svg width="80" height="100" viewBox="0 0 100 110" className="drop-shadow-lg">
+                <svg width={balloonSize.width} height={balloonSize.height} viewBox="0 0 100 110" className="drop-shadow-lg">
                   {/* String */}
                   <path
                     d="M50,85 Q48,90 52,95 Q48,100 50,105"
@@ -274,13 +289,13 @@ export default function BalloonPop({ options, title, theme, onComplete }: Balloo
                       textAnchor="middle"
                       dominantBaseline="middle"
                       fill="white"
-                      fontSize={balloon.text.length > 8 ? 10 : 13}
+                      fontSize={balloon.text.length > 8 ? balloonSize.fontSizeSmall : balloonSize.fontSize}
                       fontWeight="800"
                       fontFamily="'Nunito', sans-serif"
                       style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.3))" }}
                     >
-                      {balloon.text.length > 12
-                        ? balloon.text.slice(0, 11) + "…"
+                      {balloon.text.length > balloonSize.truncate
+                        ? balloon.text.slice(0, balloonSize.truncate - 1) + "…"
                         : balloon.text}
                     </text>
                   )}
@@ -291,7 +306,7 @@ export default function BalloonPop({ options, title, theme, onComplete }: Balloo
                   <img
                     src={balloon.imageUrl}
                     alt=""
-                    className="-mt-4 h-10 w-10 rounded-full border-2 border-white object-cover shadow-md"
+                    className={`-mt-4 rounded-full border-2 border-white object-cover shadow-md ${balloonSize.imgSize}`}
                   />
                 )}
               </motion.button>

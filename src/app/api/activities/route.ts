@@ -1,16 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET() {
-  const { data, error } = await supabase
-    .from("activities")
-    .select("*")
-    .order("created_at", { ascending: false });
+// Extract user from Authorization header
+async function getUserFromRequest(request: NextRequest) {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+
+  const token = authHeader.slice(7);
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !user) return null;
+  return user;
+}
+
+export async function GET(request: NextRequest) {
+  const user = await getUserFromRequest(request);
+
+  // If authenticated, return user's activities
+  // If not, return all public activities
+  let query = supabaseAdmin.from("activities").select("*");
+
+  if (user) {
+    query = query.eq("user_id", user.id);
+  } else {
+    query = query.eq("is_public", true);
+  }
+
+  const { data, error } = await query.order("created_at", { ascending: false });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -20,16 +40,24 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+  }
+
   const body = await request.json();
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("activities")
     .insert({
       title: body.title,
       type: body.type,
       display_mode: body.display_mode,
       theme: body.theme,
+      category: body.category || null,
       options: body.options,
+      is_public: body.is_public ?? true,
+      user_id: user.id,
     })
     .select()
     .single();

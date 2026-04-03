@@ -39,7 +39,22 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(data);
 }
 
+async function getUserFromRequest(request: NextRequest) {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+
+  const token = authHeader.slice(7);
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return null;
+  return user;
+}
+
 export async function POST(request: NextRequest) {
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+  }
+
   const body = await request.json();
 
   const { title, description, type, display_mode, theme, options, category, tags, author_name } = body;
@@ -64,6 +79,7 @@ export async function POST(request: NextRequest) {
       tags: tags || [],
       source: "community",
       author_name: author_name || null,
+      user_id: user.id,
       is_premium: false,
     })
     .select()

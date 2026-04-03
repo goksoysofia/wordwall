@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { AnimatePresence, motion } from "framer-motion";
 import { playCardOpenSound } from "@/lib/sounds";
 import type { GameStats } from "@/types/game";
+import ThemedBackground from "@/components/ThemedBackground";
 
 function useIsNarrowMobile() {
   const subscribe = useCallback((onStoreChange: () => void) => {
@@ -25,6 +26,7 @@ export interface CardStackProps {
     backgroundColor: string;
     cardColors: string[];
     cardFrontEmojis: string[];
+    decorEmojis: string[];
     celebrationText: string;
   };
   onComplete: (stats: GameStats) => void;
@@ -122,9 +124,10 @@ export default function CardStack({ options, theme, onComplete }: CardStackProps
 
   return (
     <div
-      className="flex min-h-[100dvh] w-full flex-col md:flex-row md:gap-6"
+      className="relative flex min-h-[100dvh] w-full flex-col md:flex-row md:gap-6"
       style={{ backgroundColor: theme.backgroundColor }}
     >
+      <ThemedBackground decorEmojis={theme.decorEmojis} backgroundColor={theme.backgroundColor} />
       {/* Stack area */}
       <div className="relative flex min-h-[260px] flex-1 items-end justify-center pb-4 pt-8 md:min-h-0 md:max-w-[48%] md:items-center md:pb-8 md:pt-8">
         <div className="relative h-[240px] w-full max-w-sm md:h-[min(70vh,480px)] md:max-w-md">

@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { v4 as uuidv4 } from "uuid";
 import { themes } from "@/lib/themes";
+import { useAuth } from "@/lib/auth-context";
+import { authFetch } from "@/lib/auth-fetch";
+import ImageSearchModal from "@/components/ImageSearchModal";
 import type { Activity, ActivityType, CardDisplayMode } from "@/types/activity";
 
 interface OptionRow {
@@ -31,6 +34,7 @@ const ACTIVITY_TYPES: { type: ActivityType; emoji: string; label: string }[] = [
 export default function EditActivityPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,13 +42,21 @@ export default function EditActivityPage() {
   const [displayMode, setDisplayMode] = useState<CardDisplayMode | null>(null);
   const [selectedThemeId, setSelectedThemeId] = useState<string>("fruits");
   const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("");
+  const [isPublic, setIsPublic] = useState(true);
   const [options, setOptions] = useState<OptionRow[]>([]);
   const [groups, setGroups] = useState<string[]>(["Grup 1", "Grup 2"]);
   const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set());
-  const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set());
-  const [aiPrompts, setAiPrompts] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [imageSearchTarget, setImageSearchTarget] = useState<{ optionId: string; isPair: boolean } | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push(`/login?redirect=/edit/${id}`);
+    }
+  }, [authLoading, user, router, id]);
 
   useEffect(() => {
     if (!id) return;
@@ -60,6 +72,8 @@ export default function EditActivityPage() {
         setDisplayMode(data.display_mode);
         setSelectedThemeId(data.theme);
         setTitle(data.title);
+        setCategory(data.category || "");
+        setIsPublic(data.is_public ?? true);
         setOptions(
           data.options.map((o) => ({
             id: o.id,
@@ -146,40 +160,6 @@ export default function EditActivityPage() {
     }
   }
 
-  async function onGenerateImage(optionId: string, prompt: string, isPair = false) {
-    if (!prompt.trim()) return;
-    const genKey = isPair ? `pair-${optionId}` : optionId;
-    setGeneratingIds((s) => new Set(s).add(genKey));
-    try {
-      const res = await fetch("/api/generate-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      const contentType = res.headers.get("content-type") ?? "";
-      if (!contentType.includes("application/json")) {
-        const text = await res.text();
-        throw new Error(text || "Sunucu geçersiz yanıt döndürdü");
-      }
-      const data = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok) throw new Error(data.error || "Görsel oluşturulamadı");
-      if (!data.url) throw new Error("Sunucu yanıtı geçersiz");
-      if (isPair) {
-        updateOption(optionId, { pairImageUrl: data.url });
-      } else {
-        updateOption(optionId, { imageUrl: data.url });
-      }
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "AI görsel oluşturulurken hata oluştu.");
-    } finally {
-      setGeneratingIds((s) => {
-        const next = new Set(s);
-        next.delete(genKey);
-        return next;
-      });
-    }
-  }
-
   const contentValid = useMemo(() => {
     switch (activityType) {
       case "wheel":
@@ -221,7 +201,7 @@ export default function EditActivityPage() {
     setSaveError(null);
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/activities/${id}`, {
+      const res = await authFetch(`/api/activities/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -229,7 +209,9 @@ export default function EditActivityPage() {
           type: activityType,
           display_mode: activityType === "card" ? displayMode : null,
           theme: selectedThemeId,
+          category: category.trim() || null,
           options: payloadOptions,
+          is_public: isPublic,
         }),
       });
       const data = await res.json();
@@ -432,6 +414,55 @@ export default function EditActivityPage() {
             )}
           </div>
 
+          {/* Category */}
+          <div className="card-playful p-5">
+            <label htmlFor="edit-category" className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
+              <span>📁</span> Kategori <span className="text-xs font-medium text-[#8B7BAD]">(isteğe bağlı)</span>
+            </label>
+            <input
+              id="edit-category"
+              type="text"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="Örn. Artikülasyon, Kelime Hazinesi, 1. Sınıf"
+              className="input-playful"
+            />
+          </div>
+
+          {/* Public/Private Toggle */}
+          <div className="card-playful p-5">
+            <label className="mb-1 flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
+              Görünürlük
+            </label>
+            <p className="mb-3 text-xs text-[#8B7BAD]">
+              Herkese açık etkinlikler şablon pazarında paylaşılabilir
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsPublic(true)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${
+                  isPublic
+                    ? "bg-green-500 text-white shadow-md"
+                    : "bg-[#F8F5FF] text-[#8B7BAD] hover:bg-[#F0EAFF]"
+                }`}
+              >
+                🌍 Herkese Açık
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPublic(false)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${
+                  !isPublic
+                    ? "bg-[#2D1B69] text-white shadow-md"
+                    : "bg-[#F8F5FF] text-[#8B7BAD] hover:bg-[#F0EAFF]"
+                }`}
+              >
+                🔒 Sadece Ben
+              </button>
+            </div>
+          </div>
+
           {/* Group Names (group-sort only) */}
           {activityType === "group-sort" && (
             <div className="card-playful p-5">
@@ -593,35 +624,18 @@ export default function EditActivityPage() {
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        {uploadingIds.has(opt.id) ? "Yükleniyor..." : "Görsel"}
+                        {uploadingIds.has(opt.id) ? "Yükleniyor..." : "Yükle"}
                       </span>
                     </label>
                     <button
                       type="button"
-                      disabled={generatingIds.has(opt.id)}
-                      onClick={() => {
-                        const current = aiPrompts[opt.id];
-                        if (current?.trim()) {
-                          void onGenerateImage(opt.id, current);
-                        } else {
-                          setAiPrompts((p) => ({ ...p, [opt.id]: p[opt.id] ?? "" }));
-                        }
-                      }}
-                      className="inline-flex items-center gap-1.5 rounded-xl border-2 border-[#E0D4F5] bg-gradient-to-r from-[#F3EAFF] to-[#EAF0FF] px-3 py-2 text-xs font-bold text-[#7C5CBF] transition hover:border-[#C5B0E8] hover:shadow-sm"
+                      onClick={() => setImageSearchTarget({ optionId: opt.id, isPair: false })}
+                      className="inline-flex items-center gap-1.5 rounded-xl border-2 border-[#E8E0F5] bg-[#F8F5FF] px-3 py-2 text-xs font-bold text-[#8B7BAD] transition hover:border-[#D0C0F0] hover:bg-[#F0EAFF]"
                     >
-                      {generatingIds.has(opt.id) ? (
-                        <>
-                          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#7C5CBF]/30 border-t-[#7C5CBF]" />
-                          Üretiliyor...
-                        </>
-                      ) : (
-                        <>
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                          </svg>
-                          AI Görsel
-                        </>
-                      )}
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      Görsel Ara
                     </button>
                     {opt.imageUrl && (
                       <div className="h-14 w-18 overflow-hidden rounded-xl border-2 border-[#E8E0F5]">
@@ -630,31 +644,6 @@ export default function EditActivityPage() {
                       </div>
                     )}
                   </div>
-                  {aiPrompts[opt.id] !== undefined && !opt.imageUrl && (
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={aiPrompts[opt.id] || ""}
-                        onChange={(e) => setAiPrompts((p) => ({ ...p, [opt.id]: e.target.value }))}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && aiPrompts[opt.id]?.trim()) {
-                            void onGenerateImage(opt.id, aiPrompts[opt.id]);
-                          }
-                        }}
-                        placeholder="Örn: kırmızı bir elma"
-                        className="input-playful flex-1 !py-2 text-xs"
-                        disabled={generatingIds.has(opt.id)}
-                      />
-                      <button
-                        type="button"
-                        disabled={!aiPrompts[opt.id]?.trim() || generatingIds.has(opt.id)}
-                        onClick={() => void onGenerateImage(opt.id, aiPrompts[opt.id])}
-                        className="shrink-0 rounded-xl bg-gradient-to-r from-[#7C5CBF] to-[#5B8DEF] px-3 py-2 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-                      >
-                        Üret
-                      </button>
-                    </div>
-                  )}
                 </div>
                 {activityType === "match" && (
                   <div className="mt-3 space-y-2">
@@ -675,36 +664,18 @@ export default function EditActivityPage() {
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          {uploadingIds.has(`pair-${opt.id}`) ? "Yükleniyor..." : "Eş görsel"}
+                          {uploadingIds.has(`pair-${opt.id}`) ? "Yükleniyor..." : "Eş yükle"}
                         </span>
                       </label>
                       <button
                         type="button"
-                        disabled={generatingIds.has(`pair-${opt.id}`)}
-                        onClick={() => {
-                          const key = `pair-${opt.id}`;
-                          const current = aiPrompts[key];
-                          if (current?.trim()) {
-                            void onGenerateImage(opt.id, current, true);
-                          } else {
-                            setAiPrompts((p) => ({ ...p, [key]: p[key] ?? "" }));
-                          }
-                        }}
-                        className="inline-flex items-center gap-1.5 rounded-xl border-2 border-[#E0D4F5] bg-gradient-to-r from-[#F3EAFF] to-[#EAF0FF] px-3 py-2 text-xs font-bold text-[#7C5CBF] transition hover:border-[#C5B0E8] hover:shadow-sm"
+                        onClick={() => setImageSearchTarget({ optionId: opt.id, isPair: true })}
+                        className="inline-flex items-center gap-1.5 rounded-xl border-2 border-[#D0C0F0] bg-[#F0EAFF] px-3 py-2 text-xs font-bold text-[#8B7BAD] transition hover:border-[#B8A0E0]"
                       >
-                        {generatingIds.has(`pair-${opt.id}`) ? (
-                          <>
-                            <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#7C5CBF]/30 border-t-[#7C5CBF]" />
-                            Üretiliyor...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                            </svg>
-                            AI Eş Görsel
-                          </>
-                        )}
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        Eş Görsel Ara
                       </button>
                       {opt.pairImageUrl && (
                         <div className="h-14 w-18 overflow-hidden rounded-xl border-2 border-[#D0C0F0]">
@@ -713,31 +684,6 @@ export default function EditActivityPage() {
                         </div>
                       )}
                     </div>
-                    {aiPrompts[`pair-${opt.id}`] !== undefined && !opt.pairImageUrl && (
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={aiPrompts[`pair-${opt.id}`] || ""}
-                          onChange={(e) => setAiPrompts((p) => ({ ...p, [`pair-${opt.id}`]: e.target.value }))}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && aiPrompts[`pair-${opt.id}`]?.trim()) {
-                              void onGenerateImage(opt.id, aiPrompts[`pair-${opt.id}`], true);
-                            }
-                          }}
-                          placeholder="Örn: mavi bir araba"
-                          className="input-playful flex-1 !py-2 text-xs"
-                          disabled={generatingIds.has(`pair-${opt.id}`)}
-                        />
-                        <button
-                          type="button"
-                          disabled={!aiPrompts[`pair-${opt.id}`]?.trim() || generatingIds.has(`pair-${opt.id}`)}
-                          onClick={() => void onGenerateImage(opt.id, aiPrompts[`pair-${opt.id}`], true)}
-                          className="shrink-0 rounded-xl bg-gradient-to-r from-[#7C5CBF] to-[#5B8DEF] px-3 py-2 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-                        >
-                          Üret
-                        </button>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -775,6 +721,21 @@ export default function EditActivityPage() {
           </button>
         </div>
       </div>
+
+      {/* Pexels image search modal */}
+      <ImageSearchModal
+        open={imageSearchTarget !== null}
+        onClose={() => setImageSearchTarget(null)}
+        onSelect={(url) => {
+          if (imageSearchTarget) {
+            if (imageSearchTarget.isPair) {
+              updateOption(imageSearchTarget.optionId, { pairImageUrl: url });
+            } else {
+              updateOption(imageSearchTarget.optionId, { imageUrl: url });
+            }
+          }
+        }}
+      />
     </div>
   );
 }

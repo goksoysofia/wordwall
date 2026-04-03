@@ -6,6 +6,7 @@ export interface Theme {
   cardColors: string[];
   wheelColors: string[];
   cardFrontEmojis: string[];
+  decorEmojis: string[];
   celebrationText: string;
   accentColor: string;
   accentGradient: string;
@@ -20,6 +21,7 @@ export const themes: Theme[] = [
     cardColors: ["#FF6B6B", "#FFE66D", "#4ECDC4", "#FF8A5C", "#A8E6CF", "#FF7EB3", "#7EC8E3"],
     wheelColors: ["#FF6B6B", "#FFE66D", "#4ECDC4", "#FF8A5C", "#A8E6CF", "#FF7EB3", "#7EC8E3", "#C3A6FF"],
     cardFrontEmojis: ["🍎", "🍊", "🍋", "🍇", "🍓", "🍑", "🍒", "🥝", "🍌", "🍉", "🫐", "🍍"],
+    decorEmojis: ["🍎", "🍊", "🍋", "🍇", "🍓", "🍉", "🍌", "🍒"],
     celebrationText: "Aferin! 🎉",
     accentColor: "#FF6B6B",
     accentGradient: "linear-gradient(135deg, #FF6B6B, #FFE66D)",
@@ -32,6 +34,7 @@ export const themes: Theme[] = [
     cardColors: ["#8BC34A", "#CDDC39", "#FFD54F", "#A1887F", "#81C784", "#FFB74D", "#AED581"],
     wheelColors: ["#8BC34A", "#CDDC39", "#FFD54F", "#A1887F", "#81C784", "#FFB74D", "#AED581", "#DCE775"],
     cardFrontEmojis: ["🐄", "🐑", "🐔", "🐷", "🐴", "🐰", "🦆", "🐶", "🐱", "🐸", "🦊", "🐻"],
+    decorEmojis: ["🐄", "🐑", "🐔", "🐷", "🐴", "🐰", "🌿", "🌻"],
     celebrationText: "Harikasın! 🌟",
     accentColor: "#8BC34A",
     accentGradient: "linear-gradient(135deg, #8BC34A, #FFD54F)",
@@ -44,6 +47,7 @@ export const themes: Theme[] = [
     cardColors: ["#2196F3", "#F44336", "#FF9800", "#4CAF50", "#9C27B0", "#00BCD4", "#FF5722"],
     wheelColors: ["#2196F3", "#F44336", "#FF9800", "#4CAF50", "#9C27B0", "#00BCD4", "#FF5722", "#607D8B"],
     cardFrontEmojis: ["🚗", "🚕", "🚙", "🏎️", "🚓", "🚑", "🚒", "🚐", "🛻", "🚚", "🚜", "🏍️"],
+    decorEmojis: ["🚗", "🚕", "🏎️", "🚓", "🛞", "🚦", "⛽", "🛣️"],
     celebrationText: "Süpersin! 🏁",
     accentColor: "#2196F3",
     accentGradient: "linear-gradient(135deg, #2196F3, #FF9800)",
@@ -56,6 +60,7 @@ export const themes: Theme[] = [
     cardColors: ["#E53935", "#FFFFFF", "#E53935", "#FFFFFF", "#E53935", "#FFFFFF", "#E53935"],
     wheelColors: ["#E53935", "#FFFFFF", "#E53935", "#FFFFFF", "#E53935", "#FFFFFF", "#E53935", "#FFFFFF"],
     cardFrontEmojis: ["🎈", "🇹🇷", "🎉", "⭐", "🌙", "🎊", "🎀", "🏵️", "🎗️", "🌟", "🎯", "🎪"],
+    decorEmojis: ["🎈", "🇹🇷", "⭐", "🌙", "🎉", "🎊", "🎀", "🌟"],
     celebrationText: "23 Nisan Kutlu Olsun! 🇹🇷",
     accentColor: "#E53935",
     accentGradient: "linear-gradient(135deg, #E53935, #FF8A80)",
@@ -68,6 +73,7 @@ export const themes: Theme[] = [
     cardColors: ["#5C6BC0", "#26A69A", "#EF5350", "#AB47BC", "#42A5F5", "#66BB6A", "#FFA726"],
     wheelColors: ["#5C6BC0", "#26A69A", "#EF5350", "#AB47BC", "#42A5F5", "#66BB6A", "#FFA726", "#EC407A"],
     cardFrontEmojis: ["📚", "✏️", "📐", "🎒", "📝", "🖍️", "📎", "📏", "🔬", "🎨", "🧮", "📖"],
+    decorEmojis: ["📚", "✏️", "📐", "🎒", "🖍️", "📎", "🎨", "📖"],
     celebrationText: "Tebrikler! ⭐",
     accentColor: "#5C6BC0",
     accentGradient: "linear-gradient(135deg, #5C6BC0, #42A5F5)",
@@ -80,6 +86,7 @@ export const themes: Theme[] = [
     cardColors: ["#7C4DFF", "#00E676", "#FF4081", "#18FFFF", "#FFEA00", "#B388FF", "#69F0AE"],
     wheelColors: ["#7C4DFF", "#00E676", "#FF4081", "#18FFFF", "#FFEA00", "#B388FF", "#69F0AE", "#FF80AB"],
     cardFrontEmojis: ["👽", "🛸", "🌌", "⭐", "🪐", "🚀", "🌙", "☄️", "🔭", "💫", "🌠", "👾"],
+    decorEmojis: ["🛸", "⭐", "🪐", "🚀", "🌙", "☄️", "💫", "👾"],
     celebrationText: "Galaksi Şampiyonu! 🚀",
     accentColor: "#7C4DFF",
     accentGradient: "linear-gradient(135deg, #7C4DFF, #18FFFF)",
@@ -92,6 +99,7 @@ export const themes: Theme[] = [
     cardColors: ["#1565C0", "#1E88E5", "#42A5F5", "#64B5F6", "#90CAF9", "#0D47A1", "#1976D2"],
     wheelColors: ["#0D47A1", "#1565C0", "#1976D2", "#1E88E5", "#2196F3", "#42A5F5", "#64B5F6", "#90CAF9"],
     cardFrontEmojis: ["💎", "🦋", "🐳", "💙", "🧊", "🌊", "🐬", "💠", "🫧", "🔵", "🌀", "❄️"],
+    decorEmojis: ["🐳", "🐬", "🌊", "🐠", "🐚", "🫧", "🦈", "🐙"],
     celebrationText: "Muhteşem! 💙",
     accentColor: "#1E88E5",
     accentGradient: "linear-gradient(135deg, #1565C0, #42A5F5)",
@@ -104,6 +112,7 @@ export const themes: Theme[] = [
     cardColors: ["#E91E63", "#EC407A", "#F06292", "#F48FB1", "#FF80AB", "#C2185B", "#D81B60"],
     wheelColors: ["#880E4F", "#C2185B", "#D81B60", "#E91E63", "#EC407A", "#F06292", "#F48FB1", "#F8BBD0"],
     cardFrontEmojis: ["🌸", "💖", "🦩", "🎀", "🌺", "💗", "🩷", "🌷", "🦄", "💝", "🎠", "🧁"],
+    decorEmojis: ["🌸", "💖", "🦄", "🎀", "🌷", "✨", "🧁", "🌺"],
     celebrationText: "Harikasın! 💖",
     accentColor: "#E91E63",
     accentGradient: "linear-gradient(135deg, #E91E63, #F48FB1)",
@@ -116,9 +125,23 @@ export const themes: Theme[] = [
     cardColors: ["#8D6E63", "#FFD54F", "#A1887F", "#FFC107", "#795548", "#FFB300", "#D7CCC8"],
     wheelColors: ["#8D6E63", "#FFD54F", "#A1887F", "#FFC107", "#795548", "#FFB300", "#D7CCC8", "#FF8F00"],
     cardFrontEmojis: ["📦", "🧰", "🎁", "📦", "🗝️", "🎁", "📦", "🧰", "🎁", "📦", "🗝️", "🎁"],
+    decorEmojis: ["🗝️", "💰", "🏴‍☠️", "🗺️", "💎", "⚓", "🧭", "👑"],
     celebrationText: "Hazineyi Buldun! 🏆",
     accentColor: "#FFC107",
     accentGradient: "linear-gradient(135deg, #FFB300, #FFC107)",
+  },
+  {
+    id: "plain",
+    name: "Sade",
+    emoji: "⬜",
+    backgroundColor: "#F5F5F5",
+    cardColors: ["#78909C", "#90A4AE", "#B0BEC5", "#CFD8DC", "#607D8B", "#546E7A", "#455A64"],
+    wheelColors: ["#78909C", "#90A4AE", "#B0BEC5", "#CFD8DC", "#607D8B", "#546E7A", "#455A64", "#37474F"],
+    cardFrontEmojis: ["❔", "❔", "❔", "❔", "❔", "❔", "❔", "❔", "❔", "❔", "❔", "❔"],
+    decorEmojis: [],
+    celebrationText: "Tebrikler! ✓",
+    accentColor: "#607D8B",
+    accentGradient: "linear-gradient(135deg, #607D8B, #90A4AE)",
   },
 ];
 

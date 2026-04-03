@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { playCorrectSound, playWrongSound } from "@/lib/sounds";
 import type { GameStats } from "@/types/game";
+import ThemedBackground from "@/components/ThemedBackground";
 
 export interface QuizProps {
   options: { id: string; text?: string; imageUrl?: string; isCorrect?: boolean }[];
@@ -11,6 +12,7 @@ export interface QuizProps {
   theme: {
     backgroundColor: string;
     cardColors: string[];
+    decorEmojis: string[];
     celebrationText: string;
     emoji: string;
   };
@@ -105,7 +107,8 @@ export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-6 px-3 py-8 md:px-6" style={{ backgroundColor: theme.backgroundColor }}>
+    <div className="relative flex flex-col items-center gap-6 px-3 py-8 md:px-6" style={{ backgroundColor: theme.backgroundColor }}>
+      <ThemedBackground decorEmojis={theme.decorEmojis} backgroundColor={theme.backgroundColor} />
       {/* Question Card */}
       <motion.div
         className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl sm:p-8"

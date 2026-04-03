@@ -129,7 +129,7 @@ export default function HomePage() {
           theme: activity.theme,
           category: category,
           options: activity.options,
-          is_public: activity.is_public,
+
         }),
       });
       if (res.ok) {
@@ -221,7 +221,7 @@ export default function HomePage() {
           theme: activity.theme,
           category: activity.category,
           options: activity.options,
-          is_public: activity.is_public,
+
         }),
       });
       const data = await res.json();
@@ -483,11 +483,6 @@ export default function HomePage() {
                               </span>
                               <span className="inline-flex items-center rounded-full bg-white/30 px-2.5 py-0.5 text-xs font-bold text-white backdrop-blur-sm">
                                 {label}
-                              </span>
-                              <span className={`inline-flex items-center gap-0.5 rounded-full px-2.5 py-0.5 text-xs font-bold backdrop-blur-sm ${
-                                activity.is_public ? "bg-green-400/30 text-white" : "bg-white/20 text-white/80"
-                              }`}>
-                                {activity.is_public ? "Herkese Açık" : "Gizli"}
                               </span>
                             </div>
                           </div>

@@ -45,7 +45,6 @@ export async function POST(
       theme: template.theme,
       options: template.options,
       user_id: user.id,
-      is_public: true,
     })
     .select()
     .single();

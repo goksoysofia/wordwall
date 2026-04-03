@@ -21,13 +21,11 @@ export async function GET(request: NextRequest) {
   const user = await getUserFromRequest(request);
 
   // If authenticated, return user's activities
-  // If not, return all public activities
+  // If not, return all activities
   let query = supabaseAdmin.from("activities").select("*");
 
   if (user) {
     query = query.eq("user_id", user.id);
-  } else {
-    query = query.eq("is_public", true);
   }
 
   const { data, error } = await query.order("created_at", { ascending: false });
@@ -56,7 +54,6 @@ export async function POST(request: NextRequest) {
       theme: body.theme,
       category: body.category || null,
       options: body.options,
-      is_public: body.is_public ?? true,
       user_id: user.id,
     })
     .select()

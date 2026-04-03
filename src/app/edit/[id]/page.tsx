@@ -43,7 +43,6 @@ export default function EditActivityPage() {
   const [selectedThemeId, setSelectedThemeId] = useState<string>("fruits");
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
-  const [isPublic, setIsPublic] = useState(true);
   const [options, setOptions] = useState<OptionRow[]>([]);
   const [groups, setGroups] = useState<string[]>(["Grup 1", "Grup 2"]);
   const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set());
@@ -73,7 +72,6 @@ export default function EditActivityPage() {
         setSelectedThemeId(data.theme);
         setTitle(data.title);
         setCategory(data.category || "");
-        setIsPublic(data.is_public ?? true);
         setOptions(
           data.options.map((o) => ({
             id: o.id,
@@ -211,7 +209,6 @@ export default function EditActivityPage() {
           theme: selectedThemeId,
           category: category.trim() || null,
           options: payloadOptions,
-          is_public: isPublic,
         }),
       });
       const data = await res.json();
@@ -427,40 +424,6 @@ export default function EditActivityPage() {
               placeholder="Örn. Artikülasyon, Kelime Hazinesi, 1. Sınıf"
               className="input-playful"
             />
-          </div>
-
-          {/* Public/Private Toggle */}
-          <div className="card-playful p-5">
-            <label className="mb-1 flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
-              Görünürlük
-            </label>
-            <p className="mb-3 text-xs text-[#8B7BAD]">
-              Herkese açık etkinlikler şablon pazarında paylaşılabilir
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setIsPublic(true)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${
-                  isPublic
-                    ? "bg-green-500 text-white shadow-md"
-                    : "bg-[#F8F5FF] text-[#8B7BAD] hover:bg-[#F0EAFF]"
-                }`}
-              >
-                🌍 Herkese Açık
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsPublic(false)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${
-                  !isPublic
-                    ? "bg-[#2D1B69] text-white shadow-md"
-                    : "bg-[#F8F5FF] text-[#8B7BAD] hover:bg-[#F0EAFF]"
-                }`}
-              >
-                🔒 Sadece Ben
-              </button>
-            </div>
           </div>
 
           {/* Group Names (group-sort only) */}

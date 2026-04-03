@@ -1,17 +1,15 @@
--- Add user_id and is_public columns to activities table
+-- Add user_id column to activities table
 ALTER TABLE activities ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE;
-ALTER TABLE activities ADD COLUMN IF NOT EXISTS is_public boolean NOT NULL DEFAULT true;
 
 -- Index for user queries
 CREATE INDEX IF NOT EXISTS idx_activities_user_id ON activities(user_id);
-CREATE INDEX IF NOT EXISTS idx_activities_is_public ON activities(is_public);
 
 -- Enable RLS
 ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
 
--- Anyone can read public activities (for play page)
-CREATE POLICY "Anyone can read public activities" ON activities
-  FOR SELECT USING (is_public = true OR auth.uid() = user_id);
+-- Anyone can read any activity (for play page)
+CREATE POLICY "Anyone can read activities" ON activities
+  FOR SELECT USING (true);
 
 -- Authenticated users can insert their own activities
 CREATE POLICY "Users can insert own activities" ON activities

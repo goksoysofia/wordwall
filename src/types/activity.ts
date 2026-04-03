@@ -31,7 +31,6 @@ export interface Activity {
   theme: string;
   category: string | null;
   options: ActivityOption[];
-  is_public: boolean;
   user_id: string | null;
   created_at: string;
   updated_at: string;
@@ -44,5 +43,4 @@ export interface CreateActivityPayload {
   theme: string;
   category: string | null;
   options: ActivityOption[];
-  is_public?: boolean;
 }

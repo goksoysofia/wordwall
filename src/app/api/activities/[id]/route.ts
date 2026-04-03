@@ -67,7 +67,6 @@ export async function PUT(
       theme: body.theme,
       category: body.category || null,
       options: body.options,
-      is_public: body.is_public,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)

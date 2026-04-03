@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 
-export default function LoginPage() {
+function LoginContent() {
   const { user, loading, signInWithGoogle } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -64,5 +64,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#FFF8F0] via-[#FFF3E4] to-[#FFE8F5]">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2D1B69]/20 border-t-[#2D1B69]" />
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

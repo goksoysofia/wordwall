@@ -66,6 +66,7 @@ export async function PUT(
       display_mode: body.display_mode,
       theme: body.theme,
       category: body.category || null,
+      show_feedback: body.show_feedback ?? true,
       options: body.options,
       updated_at: new Date().toISOString(),
     })

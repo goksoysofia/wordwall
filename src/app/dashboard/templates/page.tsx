@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Template, TemplateCategory, TemplateSource } from "@/types/template";
+import type { Template, TemplateCategory } from "@/types/template";
 import { TEMPLATE_CATEGORIES } from "@/types/template";
 import { getTheme } from "@/lib/themes";
 import { useAuth } from "@/lib/auth-context";
@@ -27,7 +27,6 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<TemplateCategory | null>(null);
-  const [activeSource, setActiveSource] = useState<TemplateSource | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sort, setSort] = useState<"popular" | "newest">("popular");
   const [usingId, setUsingId] = useState<string | null>(null);
@@ -44,7 +43,6 @@ export default function TemplatesPage() {
     try {
       const params = new URLSearchParams();
       if (activeCategory) params.set("category", activeCategory);
-      if (activeSource) params.set("source", activeSource);
       if (searchQuery.trim()) params.set("search", searchQuery.trim());
       params.set("sort", sort);
 
@@ -60,7 +58,7 @@ export default function TemplatesPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeCategory, activeSource, searchQuery, sort]);
+  }, [activeCategory, searchQuery, sort]);
 
   useEffect(() => {
     void loadTemplates();
@@ -108,7 +106,7 @@ export default function TemplatesPage() {
               Şablon Pazarı 📚
             </h1>
             <p className="mt-1 text-sm font-semibold text-[#8B7BAD]">
-              Hazır şablonları keşfet, tek tıkla kullan
+              Topluluk şablonlarını keşfet, tek tıkla kullan
             </p>
           </div>
         </header>
@@ -123,41 +121,20 @@ export default function TemplatesPage() {
           />
         </div>
 
-        <div className="animate-fade-in mb-4 flex flex-wrap gap-2">
-          {([null, "official", "community"] as const).map((src) => (
+        <div className="animate-fade-in mb-4 flex justify-end gap-2">
+          {(["popular", "newest"] as const).map((s) => (
             <button
-              key={src ?? "all"}
+              key={s}
               type="button"
-              onClick={() => setActiveSource(src)}
-              className={`rounded-2xl px-4 py-2 text-sm font-bold transition ${
-                activeSource === src
-                  ? "text-white shadow-md"
-                  : "bg-white text-[#8B7BAD] hover:bg-[#F8F5FF]"
+              onClick={() => setSort(s)}
+              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                sort === s ? "bg-[#2D1B69] text-white" : "bg-white text-[#8B7BAD]"
               }`}
-              style={
-                activeSource === src
-                  ? { background: "linear-gradient(135deg, #FF6B9D, #FF8A50)", border: "2px solid transparent" }
-                  : { border: "2px solid rgba(45, 27, 105, 0.06)" }
-              }
+              style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}
             >
-              {src === null ? "Tümü" : src === "official" ? "⭐ Resmi" : "👥 Topluluk"}
+              {s === "popular" ? "Popüler" : "Yeni"}
             </button>
           ))}
-          <div className="ml-auto flex gap-2">
-            {(["popular", "newest"] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setSort(s)}
-                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
-                  sort === s ? "bg-[#2D1B69] text-white" : "bg-white text-[#8B7BAD]"
-                }`}
-                style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}
-              >
-                {s === "popular" ? "Popüler" : "Yeni"}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="animate-fade-in mb-8 flex gap-2 overflow-x-auto pb-2">
@@ -243,16 +220,6 @@ export default function TemplatesPage() {
                       <span className="inline-flex items-center gap-1 rounded-full bg-[#F8F5FF] px-2.5 py-0.5 text-xs font-bold text-[#8B7BAD]">
                         {typeInfo.icon} {typeInfo.label}
                       </span>
-                      {tmpl.source === "official" && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-600">
-                          ⭐ Resmi
-                        </span>
-                      )}
-                      {tmpl.is_premium && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-0.5 text-xs font-bold text-purple-600">
-                          🔒 Premium
-                        </span>
-                      )}
                     </div>
                     <h3 className="mb-1 font-heading text-base font-bold text-[#2D1B69]">{tmpl.title}</h3>
                     {tmpl.description && (
@@ -266,7 +233,7 @@ export default function TemplatesPage() {
                         {tmpl.use_count > 0 ? `${tmpl.use_count} kez kullanıldı` : "Yeni"}
                       </span>
                     </div>
-                    {tmpl.source === "community" && tmpl.author_name && (
+                    {tmpl.author_name && (
                       <p className="mt-1 text-[10px] font-semibold text-[#C5B8DB]">👤 {tmpl.author_name}</p>
                     )}
                     <button

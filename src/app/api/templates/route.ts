@@ -9,34 +9,79 @@ const supabase = createClient(
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category");
-  const source = searchParams.get("source");
   const search = searchParams.get("search");
   const sort = searchParams.get("sort") || "popular";
 
-  let query = supabase.from("templates").select("*");
+  // Fetch community templates
+  let tplQuery = supabase.from("templates").select("*").eq("source", "community");
+  if (category) tplQuery = tplQuery.eq("category", category);
+  if (search) tplQuery = tplQuery.or(`title.ilike.%${search}%,tags.cs.{${search}}`);
 
-  if (category) {
-    query = query.eq("category", category);
+  // Fetch all user activities
+  let actQuery = supabase.from("activities").select("*").not("user_id", "is", null);
+  if (category) actQuery = actQuery.eq("category", category);
+  if (search) actQuery = actQuery.ilike("title", `%${search}%`);
+
+  const [tplResult, actResult] = await Promise.all([tplQuery, actQuery]);
+
+  if (tplResult.error) {
+    return NextResponse.json({ error: tplResult.error.message }, { status: 500 });
   }
-  if (source) {
-    query = query.eq("source", source);
+
+  const templates = tplResult.data || [];
+
+  // Transform activities into template-like objects
+  let activityTemplates: Record<string, unknown>[] = [];
+  if (!actResult.error && actResult.data?.length) {
+    // Get unique user IDs and fetch display names
+    const userIds = [...new Set(actResult.data.map((a: Record<string, unknown>) => a.user_id as string))];
+    const userNameMap: Record<string, string> = {};
+
+    await Promise.all(
+      userIds.map(async (uid) => {
+        const { data } = await supabase.auth.admin.getUserById(uid);
+        if (data?.user) {
+          userNameMap[uid] =
+            (data.user.user_metadata?.full_name as string) ||
+            data.user.email ||
+            "";
+        }
+      })
+    );
+
+    activityTemplates = actResult.data.map((act: Record<string, unknown>) => ({
+      id: `activity:${act.id}`,
+      title: act.title,
+      description: null,
+      type: act.type,
+      display_mode: act.display_mode,
+      theme: act.theme,
+      options: act.options,
+      category: act.category || "diger",
+      tags: [],
+      source: "community" as const,
+      author_name: userNameMap[act.user_id as string] || null,
+      use_count: 0,
+      created_at: act.created_at,
+      _is_activity: true,
+    }));
   }
-  if (search) {
-    query = query.or(`title.ilike.%${search}%,tags.cs.{${search}}`);
-  }
+
+  // Merge and deduplicate (skip activities already shared as templates by same user+title)
+  const tplKeys = new Set(templates.map((t: Record<string, unknown>) => `${t.user_id}:${t.title}`));
+  const merged = [
+    ...templates,
+    ...activityTemplates.filter((a) => !tplKeys.has(`${(a as Record<string, unknown>).user_id}:${a.title}`)),
+  ];
+
+  // Sort
   if (sort === "popular") {
-    query = query.order("use_count", { ascending: false });
+    merged.sort((a, b) => ((b.use_count as number) || 0) - ((a.use_count as number) || 0));
   } else {
-    query = query.order("created_at", { ascending: false });
+    merged.sort((a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime());
   }
 
-  const { data, error } = await query;
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data);
+  return NextResponse.json(merged);
 }
 
 async function getUserFromRequest(request: NextRequest) {
@@ -80,7 +125,6 @@ export async function POST(request: NextRequest) {
       source: "community",
       author_name: author_name || null,
       user_id: user.id,
-      is_premium: false,
     })
     .select()
     .single();

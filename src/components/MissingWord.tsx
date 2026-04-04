@@ -16,10 +16,11 @@ export interface MissingWordProps {
     celebrationText: string;
     emoji: string;
   };
+  showFeedback?: boolean;
   onComplete: (stats: GameStats) => void;
 }
 
-export default function MissingWord({ options, title, theme, onComplete }: MissingWordProps) {
+export default function MissingWord({ options, title, theme, showFeedback = true, onComplete }: MissingWordProps) {
   const startTime = useRef(Date.now());
   const wrongCountRef = useRef(0);
   const hasCompleted = useRef(false);
@@ -32,7 +33,6 @@ export default function MissingWord({ options, title, theme, onComplete }: Missi
     ? options.find((o) => o.id === selected)?.text || "___"
     : "___";
 
-  // Split sentence around the blank marker
   const parts = title.split("___");
   const hasBlanks = parts.length > 1;
 
@@ -52,27 +52,30 @@ export default function MissingWord({ options, title, theme, onComplete }: Missi
     setIsCorrect(correct);
 
     if (correct) {
-      playCorrectSound();
+      if (showFeedback) playCorrectSound();
     } else {
-      playWrongSound();
+      if (showFeedback) playWrongSound();
       wrongCountRef.current += 1;
     }
-  }, [selected, answered, options]);
+  }, [selected, answered, options, showFeedback]);
 
   useEffect(() => {
-    if (answered && isCorrect && !hasCompleted.current) {
-      hasCompleted.current = true;
-      const stats: GameStats = {
-        totalItems: 1,
-        correctCount: 1,
-        wrongCount: wrongCountRef.current,
-        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-        completedAt: new Date().toISOString(),
-      };
-      const t = setTimeout(() => onComplete(stats), 1500);
-      return () => clearTimeout(t);
-    }
-  }, [answered, isCorrect, onComplete]);
+    if (!answered || hasCompleted.current) return;
+
+    const shouldComplete = showFeedback ? isCorrect : true;
+    if (!shouldComplete) return;
+
+    hasCompleted.current = true;
+    const stats: GameStats = {
+      totalItems: 1,
+      correctCount: isCorrect ? 1 : 0,
+      wrongCount: wrongCountRef.current,
+      timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
+      completedAt: new Date().toISOString(),
+    };
+    const t = setTimeout(() => onComplete(stats), 1500);
+    return () => clearTimeout(t);
+  }, [answered, isCorrect, onComplete, showFeedback]);
 
   const resetGame = () => {
     setSelected(null);
@@ -82,6 +85,51 @@ export default function MissingWord({ options, title, theme, onComplete }: Missi
     startTime.current = Date.now();
     hasCompleted.current = false;
   };
+
+  // Blank styling
+  const blankStyle = () => {
+    if (!answered) {
+      return {
+        className: selected ? "bg-indigo-100 text-indigo-700" : "bg-[#F8F5FF] text-[#8B7BAD]",
+        border: selected ? "2px dashed #6366f1" : "2px dashed #C5B8DB",
+      };
+    }
+    if (!showFeedback) {
+      return { className: "bg-indigo-100 text-indigo-700", border: "2px solid #6366f1" };
+    }
+    return isCorrect
+      ? { className: "bg-emerald-100 text-emerald-700", border: "2px solid #22c55e" }
+      : { className: "bg-rose-100 text-rose-700", border: "2px solid #ef4444" };
+  };
+
+  // Option styling
+  const getOptStyle = (opt: { id: string; isCorrect?: boolean }, idx: number) => {
+    const color = theme.cardColors[idx % theme.cardColors.length];
+    const isSelected = selected === opt.id;
+
+    if (!answered) {
+      return {
+        border: isSelected ? `3px solid ${color}` : "3px solid rgba(45, 27, 105, 0.08)",
+        background: isSelected ? `${color}15` : "white",
+      };
+    }
+    if (!showFeedback) {
+      return {
+        border: isSelected ? "3px solid #6366f1" : "3px solid rgba(45, 27, 105, 0.06)",
+        background: isSelected ? "#eef2ff" : "rgba(255,255,255,0.5)",
+        opacity: isSelected ? 1 : 0.4,
+      };
+    }
+    const isWrong = isSelected && !isCorrect;
+    const isRight = opt.isCorrect;
+    return {
+      border: isRight ? "3px solid #22c55e" : isWrong ? "3px solid #ef4444" : "3px solid rgba(45, 27, 105, 0.08)",
+      background: isRight ? "#f0fdf4" : isWrong ? "#fef2f2" : "white",
+      opacity: !isRight && !isWrong ? 0.4 : 1,
+    };
+  };
+
+  const bs = blankStyle();
 
   return (
     <div className="relative flex flex-col items-center gap-8 px-3 py-8 md:px-6" style={{ backgroundColor: theme.backgroundColor }}>
@@ -101,24 +149,8 @@ export default function MissingWord({ options, title, theme, onComplete }: Missi
             <>
               {parts[0]}
               <span
-                className={`mx-1 inline-block min-w-[80px] rounded-xl px-3 py-1 text-center transition-all duration-300 ${
-                  answered
-                    ? isCorrect
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-rose-100 text-rose-700"
-                    : selected
-                      ? "bg-indigo-100 text-indigo-700"
-                      : "bg-[#F8F5FF] text-[#8B7BAD]"
-                }`}
-                style={{
-                  border: answered
-                    ? isCorrect
-                      ? "2px solid #22c55e"
-                      : "2px solid #ef4444"
-                    : selected
-                      ? "2px dashed #6366f1"
-                      : "2px dashed #C5B8DB",
-                }}
+                className={`mx-1 inline-block min-w-[80px] rounded-xl px-3 py-1 text-center transition-all duration-300 ${bs.className}`}
+                style={{ border: bs.border }}
               >
                 {blankDisplay}
               </span>
@@ -135,8 +167,8 @@ export default function MissingWord({ options, title, theme, onComplete }: Missi
         {options.map((opt, idx) => {
           const color = theme.cardColors[idx % theme.cardColors.length];
           const isSelected = selected === opt.id;
-          const isWrong = answered && isSelected && !isCorrect;
-          const isRight = answered && opt.isCorrect;
+          const isWrong = showFeedback && answered && isSelected && !isCorrect;
+          const isRight = showFeedback && answered && opt.isCorrect;
 
           return (
             <motion.button
@@ -145,26 +177,10 @@ export default function MissingWord({ options, title, theme, onComplete }: Missi
               onClick={() => handleSelect(opt.id)}
               disabled={answered}
               className="rounded-2xl px-5 py-3 font-heading text-base font-bold transition-all duration-200 disabled:cursor-default"
-              style={{
-                border: isRight
-                  ? "3px solid #22c55e"
-                  : isWrong
-                    ? "3px solid #ef4444"
-                    : isSelected
-                      ? `3px solid ${color}`
-                      : "3px solid rgba(45, 27, 105, 0.08)",
-                background: isRight
-                  ? "#f0fdf4"
-                  : isWrong
-                    ? "#fef2f2"
-                    : isSelected
-                      ? `${color}15`
-                      : "white",
-                color: "#2D1B69",
-              }}
+              style={{ ...getOptStyle(opt, idx), color: "#2D1B69" }}
               initial={{ opacity: 0, y: 10 }}
               animate={{
-                opacity: answered && !opt.isCorrect && opt.id !== selected ? 0.4 : 1,
+                opacity: getOptStyle(opt, idx).opacity ?? 1,
                 y: 0,
                 scale: isWrong ? [1, 1.05, 0.95, 1] : 1,
               }}
@@ -188,12 +204,12 @@ export default function MissingWord({ options, title, theme, onComplete }: Missi
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          Kontrol Et ✓
+          {showFeedback ? "Kontrol Et ✓" : "Onayla ✓"}
         </motion.button>
       )}
 
       {/* Feedback */}
-      {answered && (
+      {showFeedback && answered && (
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -207,8 +223,18 @@ export default function MissingWord({ options, title, theme, onComplete }: Missi
         </motion.div>
       )}
 
-      {/* Retry */}
-      {answered && !isCorrect && (
+      {!showFeedback && answered && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="rounded-2xl bg-indigo-100 px-6 py-3 text-center font-heading text-base font-bold text-indigo-700 shadow-md"
+        >
+          Cevabın kaydedildi! ✨
+        </motion.div>
+      )}
+
+      {/* Retry — only with feedback */}
+      {showFeedback && answered && !isCorrect && (
         <button
           type="button"
           onClick={resetGame}

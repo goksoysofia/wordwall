@@ -8,7 +8,7 @@ export type TemplateCategory =
   | "sosyal-iletisim"
   | "diger";
 
-export type TemplateSource = "official" | "community";
+export type TemplateSource = "community";
 
 export interface Template {
   id: string;
@@ -23,7 +23,6 @@ export interface Template {
   source: TemplateSource;
   author_name: string | null;
   use_count: number;
-  is_premium: boolean;
   created_at: string;
 }
 

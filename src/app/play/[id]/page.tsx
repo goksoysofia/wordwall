@@ -211,6 +211,7 @@ export default function PlayPage() {
         <MatchGame
           options={activity.options}
           theme={theme}
+          showFeedback={activity.show_feedback}
           onComplete={handleComplete}
         />
       )}
@@ -219,6 +220,7 @@ export default function PlayPage() {
         <GroupSort
           options={activity.options}
           theme={theme}
+          showFeedback={activity.show_feedback}
           onComplete={handleComplete}
         />
       )}
@@ -228,6 +230,7 @@ export default function PlayPage() {
           options={activity.options}
           title={activity.title}
           theme={theme}
+          showFeedback={activity.show_feedback}
           onComplete={handleComplete}
         />
       )}
@@ -237,6 +240,7 @@ export default function PlayPage() {
           options={activity.options}
           title={activity.title}
           theme={theme}
+          showFeedback={activity.show_feedback}
           onComplete={handleComplete}
         />
       )}
@@ -254,6 +258,7 @@ export default function PlayPage() {
           options={activity.options}
           title={activity.title}
           theme={theme}
+          showFeedback={activity.show_feedback}
           onComplete={handleComplete}
         />
       )}

@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       display_mode: body.display_mode,
       theme: body.theme,
       category: body.category || null,
+      show_feedback: body.show_feedback ?? true,
       options: body.options,
       user_id: user.id,
     })

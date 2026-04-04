@@ -70,6 +70,7 @@ export default function CreateActivityPage() {
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
+  const [showFeedback, setShowFeedback] = useState(true);
   const [options, setOptions] = useState<OptionRow[]>([{ id: uuidv4(), text: "" }]);
   const [groups, setGroups] = useState<string[]>(["Grup 1", "Grup 2"]);
   const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set());
@@ -264,6 +265,7 @@ export default function CreateActivityPage() {
       display_mode: activityType === "card" ? displayMode : null,
       theme: selectedThemeId,
       category: category.trim() || null,
+      show_feedback: showFeedback,
       options: payloadOptions,
     };
 
@@ -567,6 +569,33 @@ export default function CreateActivityPage() {
                   className="input-playful"
                 />
               </div>
+
+              {/* Show Feedback Toggle */}
+              {activityType && ["quiz", "missing-word", "balloon-pop", "match", "group-sort"].includes(activityType) && (
+                <div className="card-playful flex items-center justify-between p-5">
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
+                      <span>💬</span> Doğru/Yanlış Geri Bildirimi
+                    </div>
+                    <p className="mt-1 text-xs font-medium text-[#8B7BAD]">
+                      Kapalıyken çocuk cevabının doğru mu yanlış mı olduğunu görmez
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowFeedback(!showFeedback)}
+                    className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${
+                      showFeedback ? "bg-emerald-400" : "bg-gray-300"
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-md transition-transform duration-200 ${
+                        showFeedback ? "translate-x-5" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
 
               {/* Group Names (group-sort only) */}
               {activityType === "group-sort" && (

@@ -30,6 +30,7 @@ export interface Activity {
   display_mode: CardDisplayMode | null;
   theme: string;
   category: string | null;
+  show_feedback: boolean;
   options: ActivityOption[];
   user_id: string | null;
   created_at: string;
@@ -42,5 +43,6 @@ export interface CreateActivityPayload {
   display_mode: CardDisplayMode | null;
   theme: string;
   category: string | null;
+  show_feedback?: boolean;
   options: ActivityOption[];
 }

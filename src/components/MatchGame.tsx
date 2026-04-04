@@ -15,6 +15,7 @@ export interface MatchGameProps {
     celebrationText: string;
     emoji: string;
   };
+  showFeedback?: boolean;
   onComplete: (stats: GameStats) => void;
 }
 
@@ -47,7 +48,7 @@ function buildRightItems(options: MatchGameProps["options"]): MatchItem[] {
   );
 }
 
-export default function MatchGame({ options, theme, onComplete }: MatchGameProps) {
+export default function MatchGame({ options, theme, showFeedback = true, onComplete }: MatchGameProps) {
   const startTime = useRef(Date.now());
   const scoreRef = useRef({ correct: 0, wrong: 0 });
   const hasCompleted = useRef(false);
@@ -94,14 +95,14 @@ export default function MatchGame({ options, theme, onComplete }: MatchGameProps
       if (!leftItem || !rightItem) return;
 
       if (leftItem.originalId === rightItem.originalId) {
-        playMatchSound();
+        if (showFeedback) playMatchSound();
         setMatched((prev) => new Set(prev).add(leftItem.originalId));
         scoreRef.current = { ...scoreRef.current, correct: scoreRef.current.correct + 1 };
         setScore({ ...scoreRef.current });
         setSelectedLeft(null);
         setSelectedRight(null);
       } else {
-        playWrongSound();
+        if (showFeedback) playWrongSound();
         setWrongPair({ left: leftId, right: rightId });
         scoreRef.current = { ...scoreRef.current, wrong: scoreRef.current.wrong + 1 };
         setScore({ ...scoreRef.current });
@@ -157,8 +158,8 @@ export default function MatchGame({ options, theme, onComplete }: MatchGameProps
       ((item.side === "left" && wrongPair.left === item.id) ||
         (item.side === "right" && wrongPair.right === item.id));
 
-    if (isMatched) return { border: "3px solid #22c55e", background: "#f0fdf4", opacity: 0.7 };
-    if (isWrong) return { border: "3px solid #ef4444", background: "#fef2f2" };
+    if (isMatched) return { border: showFeedback ? "3px solid #22c55e" : "3px solid #6366f1", background: showFeedback ? "#f0fdf4" : "#eef2ff", opacity: 0.7 };
+    if (isWrong) return { border: showFeedback ? "3px solid #ef4444" : "3px solid rgba(45, 27, 105, 0.15)", background: showFeedback ? "#fef2f2" : "white" };
     if (isSelected) return { border: "3px solid #6366f1", background: "#eef2ff", transform: "scale(1.03)" };
     return { border: "3px solid rgba(45, 27, 105, 0.08)", background: "white" };
   };
@@ -185,16 +186,15 @@ export default function MatchGame({ options, theme, onComplete }: MatchGameProps
       {/* Score */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
-          <span className="text-lg">✅</span>
-          <span className="font-heading text-lg font-bold text-emerald-600">{score.correct}</span>
+          <span className="text-lg">🔗</span>
+          <span className="font-heading text-lg font-bold text-[#2D1B69]">{matched.size}/{options.length}</span>
         </div>
-        <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
-          <span className="text-lg">❌</span>
-          <span className="font-heading text-lg font-bold text-rose-500">{score.wrong}</span>
-        </div>
-        <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
-          <span className="text-sm font-bold text-[#8B7BAD]">{matched.size}/{options.length}</span>
-        </div>
+        {showFeedback && score.wrong > 0 && (
+          <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
+            <span className="text-lg">❌</span>
+            <span className="font-heading text-lg font-bold text-rose-500">{score.wrong}</span>
+          </div>
+        )}
       </div>
 
       {/* Instruction */}
@@ -219,7 +219,7 @@ export default function MatchGame({ options, theme, onComplete }: MatchGameProps
                 whileTap={!matched.has(item.originalId) ? { scale: 0.97 } : undefined}
                 layout
               >
-                {matched.has(item.originalId) && <span className="text-xl">✅</span>}
+                {matched.has(item.originalId) && showFeedback && <span className="text-xl">✅</span>}
                 {item.imageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={item.imageUrl} alt="" className="h-12 w-12 rounded-xl object-cover" />
@@ -247,7 +247,7 @@ export default function MatchGame({ options, theme, onComplete }: MatchGameProps
                 whileTap={!matched.has(item.originalId) ? { scale: 0.97 } : undefined}
                 layout
               >
-                {matched.has(item.originalId) && <span className="text-xl">✅</span>}
+                {matched.has(item.originalId) && showFeedback && <span className="text-xl">✅</span>}
                 {item.imageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={item.imageUrl} alt="" className="h-12 w-12 rounded-xl object-cover" />

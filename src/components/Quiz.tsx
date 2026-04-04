@@ -16,10 +16,11 @@ export interface QuizProps {
     celebrationText: string;
     emoji: string;
   };
+  showFeedback?: boolean;
   onComplete: (stats: GameStats) => void;
 }
 
-export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
+export default function Quiz({ options, title, theme, showFeedback = true, onComplete }: QuizProps) {
   const startTime = useRef(Date.now());
   const scoreRef = useRef({ correct: 0, wrong: 0, total: 0 });
   const hasCompletedRef = useRef(false);
@@ -28,10 +29,6 @@ export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
   const [isCorrect, setIsCorrect] = useState(false);
   const [score, setScore] = useState({ correct: 0, wrong: 0, total: 0 });
   const [attempts, setAttempts] = useState(0);
-
-  // For multi-question support, track current question index
-  // In current data model, one activity = one question
-  // title = question, options = answers
 
   const handleAnswer = useCallback(
     (optionId: string) => {
@@ -44,23 +41,25 @@ export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
       setIsCorrect(correct);
 
       if (correct) {
-        playCorrectSound();
+        if (showFeedback) playCorrectSound();
         scoreRef.current = { ...scoreRef.current, correct: scoreRef.current.correct + 1, total: scoreRef.current.total + 1 };
         setScore({ ...scoreRef.current });
       } else {
-        playWrongSound();
+        if (showFeedback) playWrongSound();
         scoreRef.current = { ...scoreRef.current, wrong: scoreRef.current.wrong + 1, total: scoreRef.current.total + 1 };
         setScore({ ...scoreRef.current });
         setAttempts((a) => a + 1);
       }
     },
-    [answered, options]
+    [answered, options, showFeedback]
   );
 
   useEffect(() => {
     if (!answered || hasCompletedRef.current) return;
 
-    const shouldComplete = isCorrect || attempts >= 3;
+    const shouldComplete = showFeedback
+      ? isCorrect || attempts >= 3
+      : true; // no feedback → always complete after first answer
     if (!shouldComplete) return;
 
     hasCompletedRef.current = true;
@@ -73,7 +72,7 @@ export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
     };
     const t = setTimeout(() => onComplete(stats), 1500);
     return () => clearTimeout(t);
-  }, [answered, isCorrect, attempts, onComplete]);
+  }, [answered, isCorrect, attempts, onComplete, showFeedback]);
 
   const getOptionStyle = (opt: { id: string; isCorrect?: boolean }) => {
     if (!answered) {
@@ -82,13 +81,23 @@ export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
         background: "white",
       };
     }
+    if (!showFeedback) {
+      // No feedback: just dim non-selected, highlight selected neutrally
+      if (opt.id === selected) {
+        return { border: "3px solid #6366f1", background: "#eef2ff" };
+      }
+      return {
+        border: "3px solid rgba(45, 27, 105, 0.06)",
+        background: "rgba(255,255,255,0.5)",
+        opacity: 0.5,
+      };
+    }
     if (opt.id === selected) {
       return isCorrect
         ? { border: "3px solid #22c55e", background: "#f0fdf4" }
         : { border: "3px solid #ef4444", background: "#fef2f2" };
     }
     if (opt.isCorrect && !isCorrect) {
-      // Show correct answer when user picked wrong
       return { border: "3px solid #22c55e", background: "#f0fdf4" };
     }
     return {
@@ -151,7 +160,7 @@ export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
                   animate={{
                     opacity: 1,
                     x: 0,
-                    scale: answered && opt.id === selected && !isCorrect ? [1, 1.02, 0.98, 1] : 1,
+                    scale: showFeedback && answered && opt.id === selected && !isCorrect ? [1, 1.02, 0.98, 1] : 1,
                   }}
                   transition={{ delay: idx * 0.08 }}
                   whileHover={!answered ? { scale: 1.02, borderColor: color } : undefined}
@@ -164,9 +173,11 @@ export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
                         ? "absolute left-2 top-2 h-8 w-8 text-sm sm:h-9 sm:w-9"
                         : "h-10 w-10 text-base"
                     }`}
-                    style={{ background: answered && opt.isCorrect ? "#22c55e" : color }}
+                    style={{ background: showFeedback && answered && opt.isCorrect ? "#22c55e" : color }}
                   >
-                    {answered && opt.id === selected ? (isCorrect ? "✓" : "✗") : String.fromCharCode(65 + idx)}
+                    {showFeedback && answered && opt.id === selected
+                      ? (isCorrect ? "✓" : "✗")
+                      : String.fromCharCode(65 + idx)}
                   </div>
                   {opt.imageUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -193,7 +204,7 @@ export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
       })()}
 
       {/* Feedback */}
-      {answered && (
+      {showFeedback && answered && (
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -207,8 +218,19 @@ export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
         </motion.div>
       )}
 
-      {/* Retry / Reset */}
-      {answered && !isCorrect && attempts < 3 && (
+      {/* No-feedback: neutral "selected" message */}
+      {!showFeedback && answered && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="rounded-2xl bg-indigo-100 px-6 py-3 text-center font-heading text-base font-bold text-indigo-700 shadow-md"
+        >
+          Cevabın kaydedildi! ✨
+        </motion.div>
+      )}
+
+      {/* Retry / Reset — only when feedback is on */}
+      {showFeedback && answered && !isCorrect && attempts < 3 && (
         <button
           type="button"
           onClick={resetGame}

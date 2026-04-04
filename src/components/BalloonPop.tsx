@@ -16,6 +16,7 @@ export interface BalloonPopProps {
     celebrationText: string;
     emoji: string;
   };
+  showFeedback?: boolean;
   onComplete: (stats: GameStats) => void;
 }
 
@@ -41,7 +42,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export default function BalloonPop({ options, title, theme, onComplete }: BalloonPopProps) {
+export default function BalloonPop({ options, title, theme, showFeedback = true, onComplete }: BalloonPopProps) {
   const startTime = useRef(Date.now());
   const hasCompletedRef = useRef(false);
   const scoreRef = useRef({ correct: 0, wrong: 0 });
@@ -108,14 +109,14 @@ export default function BalloonPop({ options, title, theme, onComplete }: Balloo
       ]);
 
       if (balloon.isCorrect) {
-        playCorrectSound();
+        if (showFeedback) playCorrectSound();
         setScore((s) => {
           const next = { ...s, correct: s.correct + 1 };
           scoreRef.current = next;
           return next;
         });
       } else {
-        playWrongSound();
+        if (showFeedback) playWrongSound();
         setScore((s) => {
           const next = { ...s, wrong: s.wrong + 1 };
           scoreRef.current = next;
@@ -163,10 +164,10 @@ export default function BalloonPop({ options, title, theme, onComplete }: Balloo
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
           <span className="text-lg">🎈</span>
-          <span className="font-heading text-lg font-bold text-emerald-600">{score.correct}</span>
-          <span className="text-xs font-bold text-[#8B7BAD]">/ {correctCount}</span>
+          <span className="font-heading text-lg font-bold text-[#2D1B69]">{popped.size}</span>
+          <span className="text-xs font-bold text-[#8B7BAD]">/ {options.length}</span>
         </div>
-        {score.wrong > 0 && (
+        {showFeedback && score.wrong > 0 && (
           <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
             <span className="text-lg">💨</span>
             <span className="font-heading text-lg font-bold text-rose-500">{score.wrong}</span>
@@ -206,7 +207,7 @@ export default function BalloonPop({ options, title, theme, onComplete }: Balloo
               exit={{ opacity: 0 }}
               transition={{ duration: 0.8 }}
             >
-              {effect.correct ? "✅" : "❌"}
+              {showFeedback ? (effect.correct ? "✅" : "❌") : "💥"}
             </motion.div>
           ))}
         </AnimatePresence>
@@ -321,13 +322,15 @@ export default function BalloonPop({ options, title, theme, onComplete }: Balloo
             animate={{ opacity: 1 }}
           >
             <div className="rounded-3xl bg-white/90 px-8 py-6 text-center shadow-xl backdrop-blur-sm">
-              <div className="mb-2 text-4xl">{score.wrong === 0 ? "🏆" : "🎈"}</div>
+              <div className="mb-2 text-4xl">{!showFeedback || score.wrong === 0 ? "🏆" : "🎈"}</div>
               <p className="font-heading text-lg font-bold text-[#2D1B69]">
-                {score.wrong === 0 ? "Mükemmel!" : "Tamamlandı!"}
+                {!showFeedback ? "Tebrikler!" : score.wrong === 0 ? "Mükemmel!" : "Tamamlandı!"}
               </p>
-              <p className="text-sm font-bold text-[#8B7BAD]">
-                {score.correct} doğru, {score.wrong} yanlış
-              </p>
+              {showFeedback && (
+                <p className="text-sm font-bold text-[#8B7BAD]">
+                  {score.correct} doğru, {score.wrong} yanlış
+                </p>
+              )}
             </div>
           </motion.div>
         )}

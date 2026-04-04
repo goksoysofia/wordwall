@@ -15,6 +15,7 @@ export interface GroupSortProps {
     celebrationText: string;
     emoji: string;
   };
+  showFeedback?: boolean;
   onComplete: (stats: GameStats) => void;
 }
 
@@ -27,7 +28,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export default function GroupSort({ options, theme, onComplete }: GroupSortProps) {
+export default function GroupSort({ options, theme, showFeedback = true, onComplete }: GroupSortProps) {
   const startTime = useRef(Date.now());
   const scoreRef = useRef({ correct: 0, wrong: 0 });
   const hasCompleted = useRef(false);
@@ -58,8 +59,8 @@ export default function GroupSort({ options, theme, onComplete }: GroupSortProps
       if (!item) return;
 
       if (item.group === targetGroup) {
-        playCorrectSound();
-        setFeedback({ itemId, correct: true });
+        if (showFeedback) playCorrectSound();
+        setFeedback(showFeedback ? { itemId, correct: true } : null);
         setScore((s) => {
           const next = { ...s, correct: s.correct + 1 };
           scoreRef.current = next;
@@ -75,8 +76,8 @@ export default function GroupSort({ options, theme, onComplete }: GroupSortProps
           setSelectedItem(null);
         }, 400);
       } else {
-        playWrongSound();
-        setFeedback({ itemId, correct: false });
+        if (showFeedback) playWrongSound();
+        setFeedback(showFeedback ? { itemId, correct: false } : null);
         setScore((s) => {
           const next = { ...s, wrong: s.wrong + 1 };
           scoreRef.current = next;
@@ -129,18 +130,17 @@ export default function GroupSort({ options, theme, onComplete }: GroupSortProps
       {/* Score */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
-          <span className="text-lg">✅</span>
-          <span className="font-heading text-lg font-bold text-emerald-600">{score.correct}</span>
-        </div>
-        <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
-          <span className="text-lg">❌</span>
-          <span className="font-heading text-lg font-bold text-rose-500">{score.wrong}</span>
-        </div>
-        <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
-          <span className="text-sm font-bold text-[#8B7BAD]">
+          <span className="text-lg">📂</span>
+          <span className="font-heading text-lg font-bold text-[#2D1B69]">
             {options.length - remaining.length}/{options.length}
           </span>
         </div>
+        {showFeedback && score.wrong > 0 && (
+          <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
+            <span className="text-lg">❌</span>
+            <span className="font-heading text-lg font-bold text-rose-500">{score.wrong}</span>
+          </div>
+        )}
       </div>
 
       {/* Instruction */}

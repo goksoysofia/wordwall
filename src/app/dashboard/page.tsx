@@ -220,8 +220,8 @@ export default function HomePage() {
           display_mode: activity.display_mode,
           theme: activity.theme,
           category: activity.category,
+          show_feedback: activity.show_feedback,
           options: activity.options,
-
         }),
       });
       const data = await res.json();

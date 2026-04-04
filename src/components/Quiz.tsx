@@ -125,44 +125,72 @@ export default function Quiz({ options, title, theme, onComplete }: QuizProps) {
       </motion.div>
 
       {/* Options */}
-      <div className="grid w-full max-w-lg gap-3">
-        {options.map((opt, idx) => {
-          const color = theme.cardColors[idx % theme.cardColors.length];
-          return (
-            <motion.button
-              key={opt.id}
-              type="button"
-              onClick={() => handleAnswer(opt.id)}
-              disabled={answered}
-              className="flex min-h-[64px] items-center gap-4 rounded-2xl px-5 py-4 text-left transition-all duration-200 disabled:cursor-default"
-              style={getOptionStyle(opt)}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{
-                opacity: 1,
-                x: 0,
-                scale: answered && opt.id === selected && !isCorrect ? [1, 1.02, 0.98, 1] : 1,
-              }}
-              transition={{ delay: idx * 0.08 }}
-              whileHover={!answered ? { scale: 1.02, borderColor: color } : undefined}
-              whileTap={!answered ? { scale: 0.98 } : undefined}
-            >
-              <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-heading text-base font-bold text-white"
-                style={{ background: answered && opt.isCorrect ? "#22c55e" : color }}
-              >
-                {answered && opt.id === selected ? (isCorrect ? "✓" : "✗") : String.fromCharCode(65 + idx)}
-              </div>
-              {opt.imageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={opt.imageUrl} alt="" className="h-14 w-14 rounded-xl object-cover" />
-              )}
-              {opt.text && (
-                <span className="font-heading text-base font-bold text-[#2D1B69]">{opt.text}</span>
-              )}
-            </motion.button>
-          );
-        })}
-      </div>
+      {(() => {
+        const hasImages = options.some((o) => o.imageUrl);
+        return (
+          <div className={`grid w-full gap-3 ${
+            hasImages
+              ? "max-w-2xl grid-cols-2"
+              : "max-w-lg grid-cols-1"
+          }`}>
+            {options.map((opt, idx) => {
+              const color = theme.cardColors[idx % theme.cardColors.length];
+              return (
+                <motion.button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => handleAnswer(opt.id)}
+                  disabled={answered}
+                  className={`relative overflow-hidden rounded-2xl transition-all duration-200 disabled:cursor-default ${
+                    hasImages
+                      ? "flex flex-col items-center gap-2 p-3 sm:p-4"
+                      : "flex min-h-[64px] items-center gap-4 px-5 py-4 text-left"
+                  }`}
+                  style={getOptionStyle(opt)}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{
+                    opacity: 1,
+                    x: 0,
+                    scale: answered && opt.id === selected && !isCorrect ? [1, 1.02, 0.98, 1] : 1,
+                  }}
+                  transition={{ delay: idx * 0.08 }}
+                  whileHover={!answered ? { scale: 1.02, borderColor: color } : undefined}
+                  whileTap={!answered ? { scale: 0.98 } : undefined}
+                >
+                  {/* Letter badge */}
+                  <div
+                    className={`flex shrink-0 items-center justify-center rounded-xl font-heading font-bold text-white ${
+                      hasImages
+                        ? "absolute left-2 top-2 h-8 w-8 text-sm sm:h-9 sm:w-9"
+                        : "h-10 w-10 text-base"
+                    }`}
+                    style={{ background: answered && opt.isCorrect ? "#22c55e" : color }}
+                  >
+                    {answered && opt.id === selected ? (isCorrect ? "✓" : "✗") : String.fromCharCode(65 + idx)}
+                  </div>
+                  {opt.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={opt.imageUrl}
+                      alt=""
+                      className={`rounded-xl object-cover ${
+                        hasImages ? "aspect-square w-full" : "h-14 w-14"
+                      }`}
+                    />
+                  )}
+                  {opt.text && (
+                    <span className={`font-heading font-bold text-[#2D1B69] ${
+                      hasImages ? "text-center text-sm sm:text-base" : "text-base"
+                    }`}>
+                      {opt.text}
+                    </span>
+                  )}
+                </motion.button>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Feedback */}
       {answered && (

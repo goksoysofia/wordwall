@@ -120,11 +120,12 @@ export default function SpinningWheel({
   }, []);
 
   const maxLabelLen = useMemo(() => {
-    if (n <= 0) return 12;
-    if (n <= 2) return 28;
-    if (n <= 4) return 18;
-    if (n <= 6) return 14;
-    return 10;
+    // Radial text has more room along the radius
+    if (n <= 0) return 14;
+    if (n <= 4) return 14;
+    if (n <= 8) return 12;
+    if (n <= 12) return 10;
+    return 8;
   }, [n]);
 
   const animate = useCallback(
@@ -308,22 +309,26 @@ export default function SpinningWheel({
                             style={{ filter: "url(#wheelTextShadow)" }}
                           />
                         </g>
-                      ) : (
-                        <text
-                          x={mid.x}
-                          y={mid.y}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                          fill="white"
-                          fontSize={n <= 4 ? 11 : n <= 8 ? 9 : 8}
-                          fontWeight="800"
-                          fontFamily="'Nunito', system-ui, sans-serif"
-                          transform={`rotate(${midDeg + 90}, ${mid.x}, ${mid.y})`}
-                          style={{ filter: "url(#wheelTextShadow)" }}
-                        >
-                          {label}
-                        </text>
-                      )}
+                      ) : (() => {
+                        const textR = R_INNER + (R_OUTER - R_INNER) * 0.88;
+                        const tp = polarDeg(CX, CY, textR, midDeg);
+                        return (
+                          <text
+                            x={tp.x}
+                            y={tp.y}
+                            textAnchor="start"
+                            dominantBaseline="middle"
+                            fill="white"
+                            fontSize={n <= 4 ? 11 : n <= 8 ? 9 : 7.5}
+                            fontWeight="800"
+                            fontFamily="'Nunito', system-ui, sans-serif"
+                            transform={`rotate(${midDeg + 180}, ${tp.x}, ${tp.y})`}
+                            style={{ filter: "url(#wheelTextShadow)" }}
+                          >
+                            {label}
+                          </text>
+                        );
+                      })()}
                     </g>
                   );
                 })

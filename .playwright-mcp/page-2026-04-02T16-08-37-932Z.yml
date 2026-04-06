@@ -1,0 +1,25 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e162] [cursor=pointer]:
+    - img [ref=e163]
+  - alert [ref=e166]
+  - generic [ref=e167]:
+    - generic:
+      - generic: ⭐
+      - generic: 🌈
+      - generic: 🎈
+      - generic: ✨
+      - generic: 🎪
+    - generic [ref=e168]:
+      - banner [ref=e169]:
+        - generic [ref=e171]: 🎨
+        - heading "Etkinlik Oluşturucu" [level=1] [ref=e172]
+        - paragraph [ref=e173]: Etkinlikleri kolayca oluştur, düzenle ve paylaş
+        - link "+ Yeni Etkinlik Oluştur" [ref=e175] [cursor=pointer]:
+          - /url: /create
+          - generic [ref=e176]: +
+          - text: Yeni Etkinlik Oluştur
+      - generic [ref=e178]:
+        - generic [ref=e179]: 😕
+        - paragraph [ref=e180]: Bir şeyler ters gitti
+        - paragraph [ref=e181]: Bağlantı hatası. Lütfen tekrar deneyin.
+        - button "Tekrar Dene" [ref=e182]

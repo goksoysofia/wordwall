@@ -11,14 +11,16 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get("category");
   const search = searchParams.get("search");
   const sort = searchParams.get("sort") || "popular";
+  const excludeUser = searchParams.get("exclude_user");
 
   // Fetch community templates
   let tplQuery = supabase.from("templates").select("*").eq("source", "community");
   if (category) tplQuery = tplQuery.eq("category", category);
   if (search) tplQuery = tplQuery.or(`title.ilike.%${search}%,tags.cs.{${search}}`);
 
-  // Fetch all user activities
+  // Fetch all user activities (exclude current user's own)
   let actQuery = supabase.from("activities").select("*").not("user_id", "is", null);
+  if (excludeUser) actQuery = actQuery.neq("user_id", excludeUser);
   if (category) actQuery = actQuery.eq("category", category);
   if (search) actQuery = actQuery.ilike("title", `%${search}%`);
 

@@ -1,0 +1,33 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - link [ref=e18] [cursor=pointer]:
+        - /url: /dashboard
+        - img [ref=e19]
+      - 'heading "TEST: Çark Oyunu" [level=1] [ref=e21]'
+      - generic [ref=e22]:
+        - button "Tam ekran" [ref=e23]:
+          - img [ref=e24]
+        - button "Yazdır" [ref=e26]:
+          - img [ref=e27]
+        - generic [ref=e29]:
+          - generic [ref=e30]: 🍎
+          - generic [ref=e31]: Meyveler
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - generic:
+          - img
+        - generic [ref=e34]:
+          - img "Çark" [ref=e36]:
+            - generic [ref=e39]: Armut
+            - generic [ref=e42]: Elma
+            - generic [ref=e45]: Çilek
+            - generic [ref=e48]: Portakal
+            - generic [ref=e51]: Muz
+          - button "Çevir" [disabled] [ref=e53]
+      - generic [ref=e54]:
+        - paragraph [ref=e55]: 🍎 Aferin! 🎉
+        - button "🔄 Yeniden Başlat" [disabled] [ref=e56]
+  - button "Open Next.js Dev Tools" [ref=e13] [cursor=pointer]:
+    - img [ref=e14]
+  - alert [ref=e17]

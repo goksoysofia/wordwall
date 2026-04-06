@@ -1,0 +1,7 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e6]: 🎮
+    - paragraph [ref=e7]: Etkinlik yükleniyor...
+  - button "Open Next.js Dev Tools" [ref=e13] [cursor=pointer]:
+    - img [ref=e14]
+  - alert [ref=e17]

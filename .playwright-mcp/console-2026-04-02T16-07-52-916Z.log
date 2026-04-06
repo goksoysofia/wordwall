@@ -1,0 +1,28 @@
+[     148ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[     157ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[     159ms] [ERROR] %c%s%c Each child in a list should have a unique "key" prop.%s%s See https://react.dev/link/warning-keys for more information. background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px  Server     @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[   26490ms] [ERROR] ./src/app/page.tsx:477:22
+Expression expected
+  475 |                     <span>{t.e}</span> {t.n}
+  476 |                   </div>
+> 477 |                 ))}</>
+      |                      ^
+  478 |               ))}
+  479 |             </div>
+  480 |           </div>
+
+Parsing ecmascript source code failed @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[   26547ms] [ERROR] ./src/app/page.tsx:477:22
+Expression expected
+  475 |                     <span>{t.e}</span> {t.n}
+  476 |                   </div>
+> 477 |                 ))}</>
+      |                      ^
+  478 |               ))}
+  479 |             </div>
+  480 |           </div>
+
+Parsing ecmascript source code failed @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[   26604ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[   30632ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[   30686ms] [LOG] [Fast Refresh] done in 16ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431

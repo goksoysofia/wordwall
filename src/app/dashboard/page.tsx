@@ -8,6 +8,7 @@ import { getTheme } from "@/lib/themes";
 import { useAuth } from "@/lib/auth-context";
 import { authFetch } from "@/lib/auth-fetch";
 import ShareTemplateModal from "@/components/ShareTemplateModal";
+import WordBankCreateModal from "@/components/WordBankCreateModal";
 
 function typeLabel(type: Activity["type"]): { icon: string; label: string } {
   switch (type) {
@@ -71,6 +72,7 @@ export default function HomePage() {
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [sharingActivity, setSharingActivity] = useState<Activity | null>(null);
+  const [showWordBank, setShowWordBank] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
@@ -294,6 +296,15 @@ export default function HomePage() {
               </span>
               Yeni Etkinlik Oluştur
             </Link>
+            <button
+              type="button"
+              onClick={() => setShowWordBank(true)}
+              className="flex w-full items-center justify-center gap-3 rounded-2xl px-8 py-4 text-lg font-bold text-white shadow-md transition hover:shadow-lg hover:scale-[1.02]"
+              style={{ background: "linear-gradient(135deg, #4D96FF, #6BCB77)" }}
+            >
+              <span className="text-2xl">🗣️</span>
+              Kelime Bankası
+            </button>
             <Link
               href="/dashboard/templates"
               className="flex w-full items-center justify-center gap-3 rounded-2xl bg-white px-8 py-4 text-lg font-bold text-[#2D1B69] shadow-md transition hover:shadow-lg hover:scale-[1.02]"
@@ -646,6 +657,10 @@ export default function HomePage() {
             alert("Şablonunuz başarıyla paylaşıldı! 🎉");
           }}
         />
+      )}
+
+      {showWordBank && (
+        <WordBankCreateModal onClose={() => setShowWordBank(false)} />
       )}
     </div>
   );

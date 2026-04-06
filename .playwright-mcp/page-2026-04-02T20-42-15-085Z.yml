@@ -1,0 +1,28 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic:
+      - generic: ⭐
+      - generic: 🌈
+      - generic: 🎈
+      - generic: ✨
+      - generic: 🎪
+    - generic [ref=e3]:
+      - banner [ref=e4]:
+        - generic [ref=e6]: 🎨
+        - heading "Etkinlik Oluşturucu" [level=1] [ref=e7]
+        - paragraph [ref=e8]: Etkinlikleri kolayca oluştur, düzenle ve paylaş
+        - generic [ref=e9]:
+          - link "+ Yeni Etkinlik Oluştur" [ref=e10] [cursor=pointer]:
+            - /url: /create
+            - generic [ref=e11]: +
+            - text: Yeni Etkinlik Oluştur
+          - link "📚 Şablon Pazarı" [ref=e12] [cursor=pointer]:
+            - /url: /dashboard/templates
+            - generic [ref=e13]: 📚
+            - text: Şablon Pazarı
+      - generic [ref=e14]:
+        - generic [ref=e17]: 🎪
+        - paragraph [ref=e18]: Yükleniyor...
+  - button "Open Next.js Dev Tools" [ref=e24] [cursor=pointer]:
+    - img [ref=e25]
+  - alert [ref=e28]

@@ -1,0 +1,31 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e6] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e7]:
+      - img [ref=e8]
+    - generic [ref=e11]:
+      - button "Open issues overlay" [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: "0"
+          - generic [ref=e15]: "1"
+        - generic [ref=e16]: Issue
+      - button "Collapse issues badge" [ref=e17]:
+        - img [ref=e18]
+  - generic [ref=e20]:
+    - generic:
+      - generic: ⭐
+      - generic: 🌈
+      - generic: 🎈
+      - generic: ✨
+    - generic [ref=e21]:
+      - banner [ref=e22]:
+        - generic [ref=e24]: 🎨
+        - heading "Etkinlik Oluşturucu" [level=1] [ref=e25]
+        - paragraph [ref=e26]: Etkinlikleri kolayca oluştur, düzenle ve paylaş
+        - link "+ Yeni Etkinlik Oluştur" [ref=e28] [cursor=pointer]:
+          - /url: /create
+          - generic [ref=e29]: +
+          - text: Yeni Etkinlik Oluştur
+      - generic [ref=e30]:
+        - generic [ref=e33]: 🎪
+        - paragraph [ref=e34]: Yükleniyor...
+  - alert [ref=e35]

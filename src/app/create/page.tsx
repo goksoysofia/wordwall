@@ -8,6 +8,8 @@ import { themes } from "@/lib/themes";
 import { useAuth } from "@/lib/auth-context";
 import { authFetch } from "@/lib/auth-fetch";
 import ImageSearchModal from "@/components/ImageSearchModal";
+import WordBankModal from "@/components/WordBankModal";
+import type { WordEntry } from "@/lib/wordBank";
 import type { ActivityType, CreateActivityPayload } from "@/types/activity";
 
 type FlowStep = "type" | "display" | "theme" | "content" | "preview";
@@ -77,6 +79,7 @@ export default function CreateActivityPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [imageSearchTarget, setImageSearchTarget] = useState<{ optionId: string; isPair: boolean } | null>(null);
+  const [showWordBank, setShowWordBank] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -203,6 +206,20 @@ export default function CreateActivityPage() {
         prev.map((o) => (o.id === id ? { ...o, isCorrect: !o.isCorrect } : o))
       );
     }
+  }
+
+  function handleWordBankAdd(words: WordEntry[]) {
+    const newOptions: OptionRow[] = words.map((w) => ({
+      id: uuidv4(),
+      text: w.word,
+    }));
+    setOptions((prev) => {
+      // If first option is empty placeholder, replace it
+      if (prev.length === 1 && !prev[0].text.trim() && !prev[0].imageUrl) {
+        return newOptions;
+      }
+      return [...prev, ...newOptions];
+    });
   }
 
   async function onPickImage(optionId: string, file: File | null, isPair = false) {
@@ -656,6 +673,31 @@ export default function CreateActivityPage() {
                 </div>
               )}
 
+              {/* Word Bank Button — for simple list types */}
+              {activityType && ["wheel", "card", "memory", "balloon-pop"].includes(activityType) && (
+                <button
+                  type="button"
+                  onClick={() => setShowWordBank(true)}
+                  className="card-playful flex w-full items-center gap-4 p-4 text-left transition hover:shadow-lg active:scale-[0.98]"
+                >
+                  <div
+                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl"
+                    style={{ background: "linear-gradient(135deg, #E8F4FD, #D6ECFF)" }}
+                  >
+                    🗣️
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="font-heading text-sm font-bold text-[#2D1B69]">Kelime Bankası</span>
+                    <p className="mt-0.5 text-xs font-semibold text-[#8B7BAD]">
+                      Hedef sese göre hazır kelimeler ekle
+                    </p>
+                  </div>
+                  <svg className="h-5 w-5 shrink-0 text-[#C5B8DB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
+
               {/* Options List */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
@@ -994,6 +1036,13 @@ export default function CreateActivityPage() {
           }
         }}
       />
+
+      {showWordBank && (
+        <WordBankModal
+          onAddWords={handleWordBankAdd}
+          onClose={() => setShowWordBank(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,174 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]: Wordwall
+      - link "Hemen Dene" [ref=e5] [cursor=pointer]:
+        - /url: /dashboard
+    - generic [ref=e6]:
+      - generic:
+        - generic: 🎡
+        - generic: 🃏
+        - generic: 🍎
+        - generic: 🦄
+        - generic: 🚀
+        - generic: 🐳
+        - generic: ⭐
+        - generic: 🎨
+      - generic [ref=e7]:
+        - generic [ref=e8]: ✨
+        - text: Eğitimciler için tasarlandı
+      - heading "Öğrenmeyi Oyuna Dönüştür" [level=1] [ref=e9]:
+        - generic [ref=e10]: Öğrenmeyi
+        - generic [ref=e11]: Oyuna Dönüştür
+      - paragraph [ref=e12]: Saniyeler içinde interaktif çarklar ve kart oyunları oluşturun. Sınıfınızda öğrenme heyecanını ateşleyin.
+      - generic [ref=e13]:
+        - link "Hemen Dene" [ref=e14] [cursor=pointer]:
+          - /url: /dashboard
+          - text: Hemen Dene
+          - img [ref=e15]
+        - link "Keşfet" [ref=e17] [cursor=pointer]:
+          - /url: "#ozellikler"
+          - text: Keşfet
+          - img [ref=e18]
+    - img [ref=e21]
+    - generic [ref=e23]:
+      - generic [ref=e24]: Neden Wordwall?
+      - heading "Her Ders Bir Macera" [level=2] [ref=e25]
+      - paragraph [ref=e26]: Kod bilmeden, dakikalar içinde sınıfınız için aktiviteler hazırlayın.
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - generic [ref=e29]: 🎯
+          - heading "Kolay Oluştur" [level=3] [ref=e30]
+          - paragraph [ref=e31]: Adım adım rehber ile aktivite türünü, temasını ve içeriğini seçin. Birkaç dakikada hazır.
+        - generic [ref=e32]:
+          - generic [ref=e33]: 🎮
+          - heading "Oyna & Paylaş" [level=3] [ref=e34]
+          - paragraph [ref=e35]: Her aktivitenin paylaşılabilir bir linki var. Öğrencilerinize gönderin, anında oynasınlar.
+        - generic [ref=e36]:
+          - generic [ref=e37]: 🎨
+          - heading "10 Eğlenceli Tema" [level=3] [ref=e38]
+          - paragraph [ref=e39]: Meyveler, uzay macerası, okyanus, peri masalı ve daha fazlası. Her konu için bir tema.
+    - img [ref=e41]
+    - generic [ref=e43]:
+      - generic [ref=e44]: Oyun Modları
+      - heading "İki Farklı Deneyim" [level=2] [ref=e45]
+      - paragraph [ref=e46]: Her öğrenme stiline uygun oyun modları.
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - img [ref=e52]
+          - generic [ref=e62]:
+            - heading "🎡 Çark Çevir" [level=3] [ref=e63]
+            - paragraph [ref=e64]: Rastgele seçim çarkı ile dersinize heyecan katın. Öğrenciler çarkı çevirsin, şans kimi seçecek? Ses efektleri ve animasyonlarla tam bir deneyim.
+            - generic [ref=e65]:
+              - generic [ref=e66]: Rastgele Seçim
+              - generic [ref=e67]: Ses Efektleri
+              - generic [ref=e68]: Animasyonlu
+        - generic [ref=e69]:
+          - generic [ref=e71]:
+            - generic [ref=e72]: 🍎
+            - generic [ref=e73]: 🐱
+            - generic [ref=e74]: 🚀
+            - generic [ref=e75]: ⭐
+            - generic [ref=e76]: 🎨
+            - generic [ref=e77]: 🌈
+            - generic [ref=e78]: 🎵
+            - generic [ref=e79]: 🦋
+            - generic [ref=e80]: 🌺
+          - generic [ref=e81]:
+            - heading "🃏 Kart Aç" [level=3] [ref=e82]
+            - paragraph [ref=e83]: 3x3 ızgara veya yığın modunda kartları çevirin. Hafıza oyunu, kelime pratiği veya soru-cevap — hayal gücünüzle sınırlı. Tamamlama kutlaması dahil!
+            - generic [ref=e84]:
+              - generic [ref=e85]: Izgara Modu
+              - generic [ref=e86]: Yığın Modu
+              - generic [ref=e87]: Kart Çevirme
+    - generic [ref=e88]:
+      - generic [ref=e89]: Temalar
+      - heading "Her Konuya Bir Tema" [level=2] [ref=e90]
+      - paragraph [ref=e91]: Rengarenk temalarla aktivitelerinizi kişiselleştirin.
+      - generic [ref=e93]:
+        - generic [ref=e94]:
+          - generic [ref=e95]:
+            - generic [ref=e96]: 🍎
+            - text: Meyveler
+          - generic [ref=e97]:
+            - generic [ref=e98]: 🐄
+            - text: Sevimli Çiftlik
+          - generic [ref=e99]:
+            - generic [ref=e100]: 🚗
+            - text: Hızlı Arabalar
+          - generic [ref=e101]:
+            - generic [ref=e102]: 🇹🇷
+            - text: 23 Nisan
+          - generic [ref=e103]:
+            - generic [ref=e104]: 📚
+            - text: Eğlenceli Sınıf
+          - generic [ref=e105]:
+            - generic [ref=e106]: 👽
+            - text: Uzay Macerası
+          - generic [ref=e107]:
+            - generic [ref=e108]: 🐳
+            - text: Okyanus
+          - generic [ref=e109]:
+            - generic [ref=e110]: 🦄
+            - text: Peri Masalı
+          - generic [ref=e111]:
+            - generic [ref=e112]: 🏴‍☠️
+            - text: Hazine Avı
+          - generic [ref=e113]:
+            - generic [ref=e114]: 🎭
+            - text: Yaratıcı Sahne
+        - generic [ref=e115]:
+          - generic [ref=e116]:
+            - generic [ref=e117]: 🍎
+            - text: Meyveler
+          - generic [ref=e118]:
+            - generic [ref=e119]: 🐄
+            - text: Sevimli Çiftlik
+          - generic [ref=e120]:
+            - generic [ref=e121]: 🚗
+            - text: Hızlı Arabalar
+          - generic [ref=e122]:
+            - generic [ref=e123]: 🇹🇷
+            - text: 23 Nisan
+          - generic [ref=e124]:
+            - generic [ref=e125]: 📚
+            - text: Eğlenceli Sınıf
+          - generic [ref=e126]:
+            - generic [ref=e127]: 👽
+            - text: Uzay Macerası
+          - generic [ref=e128]:
+            - generic [ref=e129]: 🐳
+            - text: Okyanus
+          - generic [ref=e130]:
+            - generic [ref=e131]: 🦄
+            - text: Peri Masalı
+          - generic [ref=e132]:
+            - generic [ref=e133]: 🏴‍☠️
+            - text: Hazine Avı
+          - generic [ref=e134]:
+            - generic [ref=e135]: 🎭
+            - text: Yaratıcı Sahne
+    - generic [ref=e137]:
+      - generic [ref=e138]:
+        - generic [ref=e139]: "2"
+        - generic [ref=e140]: Oyun Modu
+      - generic [ref=e141]:
+        - generic [ref=e142]: "10"
+        - generic [ref=e143]: Tema
+      - generic [ref=e144]:
+        - generic [ref=e145]: "%100"
+        - generic [ref=e146]: Ücretsiz
+    - generic [ref=e148]:
+      - heading "Hemen Başlayın" [level=2] [ref=e149]
+      - paragraph [ref=e150]: İlk aktivitenizi oluşturmak birkaç dakika sürer. Kayıt gerekmez, hemen deneyin.
+      - link "Aktivite Oluştur" [ref=e151] [cursor=pointer]:
+        - /url: /dashboard
+        - text: Aktivite Oluştur
+        - img [ref=e152]
+    - contentinfo [ref=e154]:
+      - paragraph [ref=e155]:
+        - text: Wordwall — Eğlenceli öğrenme aktiviteleri oluşturun.
+        - link "Uygulamaya Git" [ref=e156] [cursor=pointer]:
+          - /url: /dashboard
+  - button "Open Next.js Dev Tools" [ref=e162] [cursor=pointer]:
+    - img [ref=e163]

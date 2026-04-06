@@ -1,0 +1,32 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - link [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+      - heading "Yeni Etkinlik ✨" [level=1] [ref=e9]
+      - generic [ref=e10]: 1/1
+    - generic "Tür" [ref=e13]:
+      - generic [ref=e15]:
+        - generic [ref=e16]: 🎯
+        - paragraph [ref=e17]: Tür
+    - main [ref=e18]:
+      - region "Etkinlik türü seçin" [ref=e19]:
+        - heading "Etkinlik türü seçin" [level=2] [ref=e20]
+        - generic [ref=e21]:
+          - heading "Ne oluşturmak istersiniz?" [level=3] [ref=e22]
+          - paragraph [ref=e23]: Bir etkinlik türü seçin
+        - generic [ref=e24]:
+          - button "🎡 Çark Rastgele seçim çarkı" [ref=e25]:
+            - generic [ref=e26]: 🎡
+            - generic [ref=e27]:
+              - text: Çark
+              - paragraph [ref=e28]: Rastgele seçim çarkı
+          - button "🃏 Kart Açma Kartları çevirerek keşfet" [ref=e29]:
+            - generic [ref=e30]: 🃏
+            - generic [ref=e31]:
+              - text: Kart Açma
+              - paragraph [ref=e32]: Kartları çevirerek keşfet
+  - button "Open Next.js Dev Tools" [ref=e38] [cursor=pointer]:
+    - img [ref=e39]
+  - alert [ref=e42]

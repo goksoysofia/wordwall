@@ -1,0 +1,80 @@
+[      78ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[      86ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[      96ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <ScrollAndMaybeFocusHandler cacheNode={{rsc:{...}, ...}}>
+      <InnerScrollAndFocusHandlerOld focusAndScrollRef={{scrollRef:null, ...}} cacheNode={{rsc:{...}, ...}}>
+        <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+          <LoadingBoundary name="/" loading={null}>
+            <HTTPAccessFallbackBoundary notFound={{...}} forbidden={undefined} unauthorized={undefined}>
+              <HTTPAccessFallbackErrorBoundary pathname="/" notFound={{...}} forbidden={undefined} ...>
+                <RedirectBoundary>
+                  <RedirectErrorBoundary router={{...}}>
+                    <InnerLayoutRouter url="/" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+                      <SegmentViewNode type="page" pagePath="page.tsx">
+                        <SegmentTrieNode>
+                        <ClientPageRoot Component={function HomePage} serverProvidedParams={{...}}>
+                          <HomePage params={Promise} searchParams={Promise}>
+                            <div className="relative m...">
+                              <FloatingDecoration>
+                                <div className="pointer-ev...">
+                                  <div>
+                                  <div
++                                   className="deco-blob-1 left-[-10%] top-[-15%] bg-[#FFD93D]"
+-                                   className="deco-blob-1 left-[-5%] top-[-10%] bg-[#FFD93D]"
+                                  >
+                                  ...
+                              <div
++                               className="relative mx-auto max-w-5xl px-6 py-10 sm:px-10 sm:py-14 lg:px-12"
+-                               className="relative mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8"
+                              >
+                                <header
++                                 className="animate-fade-in mb-12 flex flex-col items-center text-center sm:mb-16"
+-                                 className="animate-fade-in mb-12 text-center sm:mb-16"
+                                >
+                                  <div
++                                   className="animate-bounce-in mb-5 inline-block"
+-                                   className="animate-bounce-in mb-6 inline-block"
+                                  >
+                                    <div
++                                     className="animate-wiggle text-5xl sm:text-6xl"
+-                                     className="animate-wiggle text-6xl sm:text-7xl"
+                                    >
++                                     🎨
+                                  <h1>
+                                  <p
++                                   className="mt-4 max-w-md text-base font-semibold text-[#8B7BAD] sm:text-lg"
+-                                   className="mx-auto mt-4 max-w-md text-base font-semibold text-[#8B7BAD] sm:text-lg"
+                                  >
++                                   Etkinlikleri kolayca oluştur, düzenle ve paylaş
+                                  <div
++                                   className="mt-8 w-full max-w-sm sm:mt-10"
+-                                   className="mx-auto mt-8 max-w-sm sm:mt-10"
+                                  >
+                                    <LinkComponent href="/create" className="btn-candy ...">
+                                      <a
++                                       className="btn-candy group flex w-full items-center justify-center gap-3 round..."
+-                                       className="btn-candy group flex w-full items-center justify-center gap-3 px-8 ..."
+                                        ref={function}
+                                        onClick={function onClick}
+                                        onMouseEnter={function onMouseEnter}
+                                        onTouchStart={function onTouchStart}
+                                        href="/create"
+                                      >
+                                ...
+                      ...
+                    ...
+        ...
+ @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[     128ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/activities:0

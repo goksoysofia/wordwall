@@ -30,6 +30,7 @@ export default function TemplatesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sort, setSort] = useState<"popular" | "newest">("popular");
   const [usingId, setUsingId] = useState<string | null>(null);
+  const [tryingId, setTryingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -45,6 +46,7 @@ export default function TemplatesPage() {
       if (activeCategory) params.set("category", activeCategory);
       if (searchQuery.trim()) params.set("search", searchQuery.trim());
       params.set("sort", sort);
+      if (user?.id) params.set("exclude_user", user.id);
 
       const res = await fetch(`/api/templates?${params}`);
       const data = await res.json();
@@ -58,7 +60,7 @@ export default function TemplatesPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeCategory, searchQuery, sort]);
+  }, [activeCategory, searchQuery, sort, user?.id]);
 
   useEffect(() => {
     void loadTemplates();
@@ -67,7 +69,7 @@ export default function TemplatesPage() {
   const handleUse = async (templateId: string) => {
     setUsingId(templateId);
     try {
-      const res = await authFetch(`/api/templates/${templateId}/use`, { method: "POST" });
+      const res = await authFetch(`/api/templates/${encodeURIComponent(templateId)}/use`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || "Şablon kullanılamadı.");
@@ -78,6 +80,26 @@ export default function TemplatesPage() {
       alert("Bir hata oluştu.");
     } finally {
       setUsingId(null);
+    }
+  };
+
+  const handleTry = (templateId: string) => {
+    if (templateId.startsWith("activity:")) {
+      const activityId = templateId.replace("activity:", "");
+      router.push(`/play/${activityId}`);
+    } else {
+      setTryingId(templateId);
+      authFetch(`/api/templates/${encodeURIComponent(templateId)}/use`, { method: "POST" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.id) {
+            router.push(`/play/${data.id}`);
+          } else {
+            alert(data.error || "Denenemedi.");
+          }
+        })
+        .catch(() => alert("Bir hata oluştu."))
+        .finally(() => setTryingId(null));
     }
   };
 
@@ -203,6 +225,7 @@ export default function TemplatesPage() {
               const typeInfo = ACTIVITY_TYPE_LABELS[tmpl.type] || { icon: "🎯", label: "Etkinlik" };
               const catInfo = TEMPLATE_CATEGORIES.find((c) => c.slug === tmpl.category);
               const busy = usingId === tmpl.id;
+              const trying = tryingId === tmpl.id;
 
               return (
                 <article
@@ -236,21 +259,37 @@ export default function TemplatesPage() {
                     {tmpl.author_name && (
                       <p className="mt-1 text-[10px] font-semibold text-[#C5B8DB]">👤 {tmpl.author_name}</p>
                     )}
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void handleUse(tmpl.id)}
-                      className="btn-candy btn-green mt-3 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm"
-                    >
-                      {busy ? (
-                        <>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        disabled={trying}
+                        onClick={() => handleTry(tmpl.id)}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#2D1B69]/10 bg-[#F8F5FF] py-2.5 text-sm font-bold text-[#2D1B69] transition hover:bg-[#F0EAFF]"
+                      >
+                        {trying ? (
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#2D1B69]/30 border-t-[#2D1B69]" />
+                        ) : (
+                          <>
+                            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                            Dene
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void handleUse(tmpl.id)}
+                        className="btn-candy btn-green flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm"
+                      >
+                        {busy ? (
                           <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                          Kopyalanıyor...
-                        </>
-                      ) : (
-                        "Kullan →"
-                      )}
-                    </button>
+                        ) : (
+                          "Kullan →"
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </article>
               );

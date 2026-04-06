@@ -1,0 +1,105 @@
+[     267ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[     311ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[     350ms] Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <InnerScrollAndFocusHandlerOld focusAndScrollRef={{scrollRef:null, ...}} cacheNode={{rsc:{...}, ...}}>
+      <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+        <LoadingBoundary name="/" loading={null}>
+          <HTTPAccessFallbackBoundary notFound={{...}} forbidden={undefined} unauthorized={undefined}>
+            <HTTPAccessFallbackErrorBoundary pathname="/" notFound={{...}} forbidden={undefined} unauthorized={undefined} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <InnerLayoutRouter url="/" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+                    <SegmentViewNode type="page" pagePath="page.tsx">
+                      <SegmentTrieNode>
+                      <ClientPageRoot Component={function HomePage} serverProvidedParams={{...}}>
+                        <HomePage params={Promise} searchParams={Promise}>
+                          <div className="relative m...">
+                            <FloatingDecoration>
+                              <div className="pointer-ev...">
+                                <div>
+                                <div
++                                 className="absolute -left-16 -top-16 h-48 w-48 rounded-full bg-[#FFD93D]/10 blur-3xl"
+-                                 className="deco-blob-1 left-[-5%] top-[-10%] bg-[#FFD93D]"
+                                >
+                                <div
++                                 className="absolute -right-12 top-[30%] h-40 w-40 rounded-full bg-[#FF6B9D]/8 blur-3xl"
+-                                 className="deco-blob-2 right-[-8%] top-[20%] bg-[#FF6B9D]"
+                                >
+                                <div
++                                 className="absolute bottom-[10%] left-[40%] h-44 w-44 rounded-full bg-[#4D96FF]/8 bl..."
+-                                 className="deco-blob-1 bottom-[-5%] left-[30%] bg-[#4D96FF]"
+                                >
+                                <div
++                                 className="absolute -bottom-8 -right-8 h-36 w-36 rounded-full bg-[#6BCB77]/8 blur-3xl"
+-                                 className="deco-blob-2 bottom-[10%] right-[5%] bg-[#6BCB77]"
+                                >
+                                <div>
+                                <div
++                                 className="animate-float-slow absolute left-[6%] top-[18%] text-2xl opacity-15"
+-                                 className="animate-float-slow absolute left-[8%] top-[15%] text-4xl opacity-20"
+                                >
++                                 ⭐
+                                <div
++                                 className="animate-float absolute right-[10%] top-[10%] text-xl opacity-10"
+-                                 className="animate-float absolute right-[12%] top-[8%] text-3xl opacity-15"
+                                  style={{animationDelay:"1s"}}
+                                >
++                                 🌈
+                                <div
++                                 className="animate-float-slow absolute bottom-[25%] left-[4%] text-xl opacity-10"
+-                                 className="animate-float-slow absolute bottom-[20%] left-[5%] text-3xl opacity-15"
+                                  style={{animationDelay:"2s"}}
+                                >
++                                 🎈
+                                <div
++                                 className="animate-float absolute bottom-[18%] right-[6%] text-2xl opacity-15"
+-                                 className="animate-float absolute bottom-[15%] right-[8%] text-4xl opacity-20"
+                                  style={{animationDelay:"0.5s"}}
+                                >
++                                 ✨
+-                               <div
+-                                 className="animate-float-slow absolute left-[45%] top-[5%] text-2xl opacity-10"
+-                                 style={{animation-delay:"3s"}}
+-                               >
+                            ...
+                    ...
+                  ...
+      ...
+
+    at throwOnHydrationMismatch (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:3318:56)
+    at popHydrationState (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:3403:13)
+    at completeWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:6922:25)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:965:74)
+    at completeUnitOfWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9622:23)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9557:28)
+    at workLoopConcurrentByScheduler (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9551:58)
+    at renderRootConcurrent (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9534:71)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:9061:150)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:10255:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_0rpq4pf._.js:2647:64)
+[     380ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/activities:0
+[     380ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/favicon.ico:0
+[     397ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/activities:0
+[   30770ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[   30799ms] [LOG] [Fast Refresh] done in 32ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[   38677ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[   38706ms] [LOG] [Fast Refresh] done in 32ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[   43902ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/activities:0
+[   44996ms] [WARNING] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[   50643ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/activities:0
+[   50660ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/activities:0
+[   56275ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[   56321ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/activities:0
+[   56345ms] [LOG] [Fast Refresh] done in 30ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431

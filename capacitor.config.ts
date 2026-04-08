@@ -11,9 +11,6 @@ const config: CapacitorConfig = {
     // url: 'https://wordwall.vercel.app',
     // cleartext: false,
   },
-  ios: {
-    limitsNavigationsToAppBoundDomains: true,
-  },
   plugins: {
     SplashScreen: {
       launchAutoHide: false,

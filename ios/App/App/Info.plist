@@ -47,10 +47,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
-	<key>WKAppBoundDomains</key>
-	<array>
-		<string>sofyagoksoy.vercel.app</string>
-		<string>localhost</string>
-	</array>
 </dict>
 </plist>

@@ -37,6 +37,28 @@ export default function CapacitorInit() {
       PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
         console.log('[Push] Action performed:', notification);
       });
+
+      // App lifecycle: background/foreground geçişlerini dinle
+      const { App } = await import('@capacitor/app');
+
+      App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) {
+          console.log('[App] Foreground — reconnecting...');
+          window.dispatchEvent(new CustomEvent('app-foreground'));
+        } else {
+          console.log('[App] Background');
+          window.dispatchEvent(new CustomEvent('app-background'));
+        }
+      });
+
+      // Android geri tuşu
+      App.addListener('backButton', ({ canGoBack }) => {
+        if (canGoBack) {
+          window.history.back();
+        } else {
+          App.exitApp();
+        }
+      });
     })();
   }, []);
 

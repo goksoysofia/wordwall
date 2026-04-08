@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Wordwall</string>
+    <string name="title_activity_main">Wordwall</string>
+    <string name="package_name">com.placeholder.wordwall</string>
+    <string name="custom_url_scheme">com.placeholder.wordwall</string>
+</resources>

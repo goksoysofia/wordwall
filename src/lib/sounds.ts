@@ -4,6 +4,8 @@
 // Rich Audio Engine — layered synth sounds with reverb & effects
 // =============================================================
 
+import { hapticCorrect, hapticWrong, hapticLight, hapticMedium, hapticHeavy } from './haptics';
+
 let ctx: AudioContext | null = null;
 let reverbNode: ConvolverNode | null = null;
 
@@ -143,6 +145,7 @@ function playNoise(opts: {
 export function playTickSound() {
   playNoise({ duration: 0.03, vol: 0.12, filterFreq: 3000, filterType: "highpass" });
   playNote({ freq: 1200, duration: 0.04, type: "sine", vol: 0.08, attack: 0.002 });
+  void hapticLight();
 }
 
 /** Card reveal — magical sparkle ascending */
@@ -171,6 +174,7 @@ export function playCardOpenSound() {
   });
   // sparkle noise
   playNoise({ duration: 0.08, vol: 0.05, filterFreq: 8000, filterType: "highpass", delay: 0.05 });
+  void hapticLight();
 }
 
 /** Wheel stop — triumphant brass-like fanfare */
@@ -201,6 +205,7 @@ export function playWheelStopSound() {
   });
   // impact hit
   playNoise({ duration: 0.06, vol: 0.15, filterFreq: 1500, filterType: "lowpass" });
+  void hapticHeavy();
 }
 
 /** Remove item — soft descending whoosh */
@@ -239,6 +244,7 @@ export function playCorrectSound() {
   // success sparkle burst
   playNoise({ duration: 0.06, vol: 0.06, filterFreq: 10000, filterType: "highpass", delay: 0.15 });
   playNoise({ duration: 0.05, vol: 0.04, filterFreq: 12000, filterType: "highpass", delay: 0.22 });
+  void hapticCorrect();
 }
 
 /** Wrong answer — gentle "nope" without being harsh */
@@ -248,6 +254,7 @@ export function playWrongSound() {
   playNote({ freq: 349, duration: 0.25, type: "triangle", vol: 0.12, delay: 0.08, reverb: 0.15 });
   // soft thud
   playNoise({ duration: 0.06, vol: 0.08, filterFreq: 400, filterType: "lowpass", delay: 0.02 });
+  void hapticWrong();
 }
 
 /** Balloon pop — percussive burst with pitch sweep */
@@ -272,6 +279,7 @@ export function playPopSound() {
   playNoise({ duration: 0.08, vol: 0.2, filterFreq: 5000, filterType: "highpass" });
   // Airy release
   playNoise({ duration: 0.15, vol: 0.06, filterFreq: 2000, filterType: "bandpass", delay: 0.04 });
+  void hapticMedium();
 }
 
 /** Match found — satisfying lock-in chime */
@@ -283,6 +291,7 @@ export function playMatchSound() {
   playNote({ freq: 1568, duration: 0.3, type: "sine", vol: 0.06, delay: 0.08, reverb: 0.5 });
   // satisfying click
   playNoise({ duration: 0.02, vol: 0.1, filterFreq: 6000, filterType: "highpass" });
+  void hapticCorrect();
 }
 
 /** Card flip — quick swoosh */
@@ -291,6 +300,7 @@ export function playFlipSound() {
   playNoise({ duration: 0.08, vol: 0.1, filterFreq: 4000, filterType: "bandpass" });
   // subtle tone
   playNote({ freq: 800, duration: 0.06, type: "sine", vol: 0.08, attack: 0.003 });
+  void hapticLight();
 }
 
 /** Celebration — full orchestral burst with ascending scale, fanfare, and fireworks */
@@ -359,4 +369,5 @@ export function playCelebrationSound() {
   // Phase 4: final triumphant note
   playNote({ freq: 1047, duration: 0.8, type: "sine", vol: 0.18, delay: 1.1, attack: 0.02, reverb: 0.5 });
   playNote({ freq: 1047 * 2, duration: 0.5, type: "sine", vol: 0.06, delay: 1.15, reverb: 0.5 });
+  void hapticHeavy();
 }

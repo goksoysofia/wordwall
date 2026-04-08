@@ -1,10 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import CapacitorInit from "./capacitor-init";
 
 export const metadata: Metadata = {
   title: "Etkinlik Oluşturucu",
   description: "Dil ve konuşma terapisi etkinlikleri oluştur ve paylaş",
+};
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  themeColor: "#FFF8F0",
 };
 
 export default function RootLayout({
@@ -26,7 +32,8 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased">
+      <body className="antialiased" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
+        <CapacitorInit />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

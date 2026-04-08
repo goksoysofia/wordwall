@@ -147,6 +147,7 @@ export default function PlayPage() {
       <div
         className="flex items-center justify-between px-4 py-3 sm:px-6"
         style={{
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)',
           background: "rgba(255,255,255,0.85)",
           backdropFilter: "blur(12px)",
           borderBottom: "2px solid rgba(45, 27, 105, 0.06)",

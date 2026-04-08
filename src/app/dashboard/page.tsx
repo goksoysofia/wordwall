@@ -243,7 +243,7 @@ export default function HomePage() {
     <div className="relative min-h-screen overflow-hidden">
       <FloatingDecoration />
 
-      <div className="relative mx-auto max-w-5xl px-6 py-10 sm:px-10 sm:py-14 lg:px-12">
+      <div className="relative mx-auto max-w-5xl px-6 py-10 sm:px-10 sm:py-14 lg:px-12" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2.5rem)' }}>
         {/* User bar */}
         {user && (
           <div className="animate-fade-in mb-6 flex items-center justify-end gap-3">

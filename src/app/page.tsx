@@ -36,7 +36,7 @@ export default function LandingPage() {
         /* NAV */
         .l-nav {
           position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-          padding: 1rem 2rem;
+          padding: calc(env(safe-area-inset-top, 0px) + 1rem) 2rem 1rem 2rem;
           display: flex; justify-content: space-between; align-items: center;
           backdrop-filter: blur(20px);
           background: rgba(255, 248, 240, 0.8);

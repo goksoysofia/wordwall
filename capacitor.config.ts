@@ -4,8 +4,15 @@ const config: CapacitorConfig = {
   appId: 'com.placeholder.wordwall',
   appName: 'Wordwall',
   server: {
-    url: 'https://wordwall.vercel.app',
-    cleartext: false,
+    // Geliştirme: local dev server (npm run dev çalışırken)
+    url: 'http://localhost:3000',
+    cleartext: true,
+    // Production: deploy edilmiş URL
+    // url: 'https://wordwall.vercel.app',
+    // cleartext: false,
+  },
+  ios: {
+    limitsNavigationsToAppBoundDomains: true,
   },
   plugins: {
     SplashScreen: {

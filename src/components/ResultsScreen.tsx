@@ -2,11 +2,13 @@
 
 import { motion } from "framer-motion";
 import type { GameStats } from "@/types/game";
+import { isNative } from '@/lib/platform';
 
 export interface ResultsScreenProps {
   stats: GameStats;
   activityTitle: string;
   themeEmoji: string;
+  activityId: string;
   onReplay: () => void;
   onBack: () => void;
 }
@@ -61,6 +63,7 @@ export default function ResultsScreen({
   stats,
   activityTitle,
   themeEmoji,
+  activityId,
   onReplay,
   onBack,
 }: ResultsScreenProps) {
@@ -71,6 +74,21 @@ export default function ResultsScreen({
 
   const encouragement = getEncouragementMessage(accuracy);
   const progressColor = getProgressBarColor(accuracy);
+
+  const handleShare = async () => {
+    const shareData = {
+      title: activityTitle,
+      text: `${activityTitle} — ${accuracy}% başarı oranı ile tamamladım!`,
+      url: `${window.location.origin}/play/${activityId}`,
+    };
+
+    if (isNative()) {
+      const { Share } = await import('@capacitor/share');
+      await Share.share(shareData);
+    } else if (navigator.share) {
+      await navigator.share(shareData);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#FFF8F0] bg-dots-pattern px-4 py-10">
@@ -223,6 +241,13 @@ export default function ResultsScreen({
             className="btn-blue flex-1 rounded-2xl px-6 py-4 font-heading text-base font-bold text-white"
           >
             Ana Sayfa ↩
+          </button>
+          <button
+            type="button"
+            onClick={handleShare}
+            className="flex-1 rounded-2xl bg-[#8B7BAD] px-6 py-4 font-heading text-base font-bold text-white transition hover:bg-[#7A6B9C]"
+          >
+            Paylaş 📤
           </button>
         </motion.div>
       </motion.div>

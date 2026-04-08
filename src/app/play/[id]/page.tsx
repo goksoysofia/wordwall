@@ -274,6 +274,7 @@ export default function PlayPage() {
           stats={gameStats}
           activityTitle={activity.title}
           themeEmoji={theme.emoji}
+          activityId={activity.id}
           onReplay={() => {
             setGameStats(null);
             window.location.reload();

@@ -334,25 +334,89 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
             ))}
         </AnimatePresence>
 
-        {/* All popped message */}
-        {popped.size === balloons.length && (
-          <motion.div
-            className="absolute inset-0 flex items-center justify-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <div className="rounded-3xl bg-white/90 px-8 py-6 text-center shadow-xl backdrop-blur-sm">
-              <div className="mb-2 text-4xl">{!showFeedback || score.wrong === 0 ? "🏆" : "🎈"}</div>
-              <p className="font-heading text-lg font-bold text-[#2D1B69]">
-                {!showFeedback ? "Tebrikler!" : score.wrong === 0 ? "Mükemmel!" : "Tamamlandı!"}
-              </p>
-              {showFeedback && (
-                <p className="text-sm font-bold text-[#8B7BAD]">
-                  {score.correct} doğru, {score.wrong} yanlış
+        {/* Read mode confetti */}
+        {isReadMode && showReadComplete && (
+          <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
+            {theme.decorEmojis.slice(0, 6).map((emoji, i) => (
+              <motion.div
+                key={`confetti-${i}`}
+                className="absolute text-2xl"
+                style={{ left: `${10 + i * 15}%` }}
+                initial={{ y: -40, opacity: 1, rotate: 0 }}
+                animate={{
+                  y: ["-10%", "110%"],
+                  rotate: [0, 360],
+                  opacity: [1, 1, 0],
+                }}
+                transition={{
+                  duration: 2.5 + i * 0.3,
+                  delay: i * 0.2,
+                  repeat: Infinity,
+                  repeatDelay: 1,
+                  ease: "easeIn",
+                }}
+              >
+                {emoji}
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* All popped — completion */}
+        {isReadMode ? (
+          // Read mode: celebration with replay button
+          showReadComplete && (
+            <motion.div
+              className="absolute inset-0 z-30 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <div className="rounded-3xl bg-white/90 px-8 py-6 text-center shadow-xl backdrop-blur-sm">
+                <motion.div
+                  className="mb-3 text-5xl"
+                  animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 0.6, repeat: Infinity, repeatDelay: 2 }}
+                >
+                  🎉
+                </motion.div>
+                <p className="font-heading text-xl font-bold text-[#2D1B69]">
+                  {theme.celebrationText}
                 </p>
-              )}
-            </div>
-          </motion.div>
+                <p className="mt-1 text-sm font-bold text-[#8B7BAD]">
+                  {options.length} seçenek okundu!
+                </p>
+                <button
+                  type="button"
+                  onClick={resetGame}
+                  className="mt-4 rounded-2xl px-6 py-2.5 font-heading text-sm font-bold text-white shadow-md transition hover:scale-105 hover:shadow-lg"
+                  style={{ background: "linear-gradient(135deg, #FF6B9D, #FF8A50)" }}
+                >
+                  🔄 Tekrar Oyna
+                </button>
+              </div>
+            </motion.div>
+          )
+        ) : (
+          // Pop mode: existing completion
+          popped.size === balloons.length && (
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <div className="rounded-3xl bg-white/90 px-8 py-6 text-center shadow-xl backdrop-blur-sm">
+                <div className="mb-2 text-4xl">{!showFeedback || score.wrong === 0 ? "🏆" : "🎈"}</div>
+                <p className="font-heading text-lg font-bold text-[#2D1B69]">
+                  {!showFeedback ? "Tebrikler!" : score.wrong === 0 ? "Mükemmel!" : "Tamamlandı!"}
+                </p>
+                {showFeedback && (
+                  <p className="text-sm font-bold text-[#8B7BAD]">
+                    {score.correct} doğru, {score.wrong} yanlış
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          )
         )}
       </div>
 

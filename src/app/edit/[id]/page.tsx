@@ -171,14 +171,18 @@ export default function EditActivityPage() {
       case "group-sort":
         return groups.length >= 2 && groups.every((g) => g.trim()) && options.length >= 2 && options.every((o) => (o.text.trim() || o.imageUrl) && o.group);
       case "quiz":
+        return options.length >= 2 && options.every((o) => o.text.trim() || o.imageUrl) && options.some((o) => o.isCorrect);
       case "balloon-pop":
+        if (displayMode === "read") {
+          return options.length >= 2 && options.every((o) => o.text.trim() || o.imageUrl);
+        }
         return options.length >= 2 && options.every((o) => o.text.trim() || o.imageUrl) && options.some((o) => o.isCorrect);
       case "missing-word":
         return title.includes("___") && options.length >= 2 && options.every((o) => o.text.trim()) && options.some((o) => o.isCorrect);
       default:
         return false;
     }
-  }, [activityType, options, groups, title]);
+  }, [activityType, options, groups, title, displayMode]);
 
   async function handleSave() {
     const payloadOptions = options
@@ -207,7 +211,7 @@ export default function EditActivityPage() {
         body: JSON.stringify({
           title: title.trim() || "Adsız etkinlik",
           type: activityType,
-          display_mode: activityType === "card" ? displayMode : null,
+          display_mode: (activityType === "card" || activityType === "balloon-pop") ? displayMode : null,
           theme: selectedThemeId,
           category: category.trim() || null,
           show_feedback: showFeedback,
@@ -295,7 +299,8 @@ export default function EditActivityPage() {
                   onClick={() => {
                     setActivityType(t.type);
                     if (t.type === "card" && !displayMode) setDisplayMode("grid");
-                    else if (t.type !== "card") setDisplayMode(null);
+                    else if (t.type === "balloon-pop" && !displayMode) setDisplayMode("pop");
+                    else if (t.type !== "card" && t.type !== "balloon-pop") setDisplayMode(null);
                   }}
                   className={`flex items-center justify-center gap-1.5 rounded-2xl px-3 py-3 text-xs font-bold transition ${
                     activityType === t.type
@@ -336,6 +341,33 @@ export default function EditActivityPage() {
                     }
                   >
                     {m === "grid" ? "⊞ Izgara" : "▤ Sıralı"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activityType === "balloon-pop" && (
+            <div className="animate-scale-in card-playful p-5">
+              <label className="mb-3 flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
+                <span>👀</span> Balon Modu
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {(["pop", "read"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setDisplayMode(m)}
+                    className={`flex items-center justify-center gap-2 rounded-2xl px-4 py-3.5 text-sm font-bold transition ${
+                      displayMode === m ? "text-white shadow-md" : "bg-[#F8F5FF] text-[#8B7BAD] hover:bg-[#F0EAFF]"
+                    }`}
+                    style={
+                      displayMode === m
+                        ? { background: "linear-gradient(135deg, #4D96FF, #6BCB77)", border: "2px solid transparent" }
+                        : { border: "2px solid rgba(45, 27, 105, 0.06)" }
+                    }
+                  >
+                    {m === "pop" ? "🎯 Balon Patlat" : "📖 Balon Oku"}
                   </button>
                 ))}
               </div>
@@ -387,11 +419,11 @@ export default function EditActivityPage() {
           <div className="card-playful p-5">
             <label htmlFor="edit-title" className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
               <span>📝</span>
-              {activityType === "quiz" || activityType === "balloon-pop"
+              {activityType === "quiz" || (activityType === "balloon-pop" && displayMode !== "read")
                 ? "Soru"
                 : activityType === "missing-word"
                   ? "Cümle (___ ile boşluk belirtin)"
-                  : "Etkinlik Adı"}
+                  : "Etkinlik adı"}
             </label>
             <input
               id="edit-title"
@@ -430,7 +462,7 @@ export default function EditActivityPage() {
           </div>
 
           {/* Show Feedback Toggle */}
-          {["quiz", "missing-word", "balloon-pop", "match", "group-sort"].includes(activityType) && (
+          {["quiz", "missing-word", "balloon-pop", "match", "group-sort"].includes(activityType) && !(activityType === "balloon-pop" && displayMode === "read") && (
             <div className="card-playful flex items-center justify-between p-5">
               <div>
                 <div className="flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
@@ -532,7 +564,7 @@ export default function EditActivityPage() {
                     {idx + 1}
                   </span>
                   <div className="flex items-center gap-2">
-                    {(activityType === "quiz" || activityType === "missing-word" || activityType === "balloon-pop") && (
+                    {(activityType === "quiz" || activityType === "missing-word" || (activityType === "balloon-pop" && displayMode !== "read")) && (
                       <button
                         type="button"
                         onClick={() => toggleCorrect(opt.id)}

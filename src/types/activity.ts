@@ -9,6 +9,8 @@ export type ActivityType =
   | "balloon-pop";
 
 export type CardDisplayMode = "grid" | "stack";
+export type BalloonDisplayMode = "pop" | "read";
+export type DisplayMode = CardDisplayMode | BalloonDisplayMode;
 
 export interface ActivityOption {
   id: string;
@@ -27,7 +29,7 @@ export interface Activity {
   id: string;
   title: string;
   type: ActivityType;
-  display_mode: CardDisplayMode | null;
+  display_mode: DisplayMode | null;
   theme: string;
   category: string | null;
   show_feedback: boolean;
@@ -40,7 +42,7 @@ export interface Activity {
 export interface CreateActivityPayload {
   title: string;
   type: ActivityType;
-  display_mode: CardDisplayMode | null;
+  display_mode: DisplayMode | null;
   theme: string;
   category: string | null;
   show_feedback?: boolean;

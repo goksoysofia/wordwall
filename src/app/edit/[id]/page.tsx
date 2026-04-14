@@ -8,7 +8,7 @@ import { themes } from "@/lib/themes";
 import { useAuth } from "@/lib/auth-context";
 import { authFetch } from "@/lib/auth-fetch";
 import ImageSearchModal from "@/components/ImageSearchModal";
-import type { Activity, ActivityType, CardDisplayMode } from "@/types/activity";
+import type { Activity, ActivityType, DisplayMode } from "@/types/activity";
 
 interface OptionRow {
   id: string;
@@ -39,7 +39,7 @@ export default function EditActivityPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activityType, setActivityType] = useState<ActivityType>("wheel");
-  const [displayMode, setDisplayMode] = useState<CardDisplayMode | null>(null);
+  const [displayMode, setDisplayMode] = useState<DisplayMode | null>(null);
   const [selectedThemeId, setSelectedThemeId] = useState<string>("fruits");
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");

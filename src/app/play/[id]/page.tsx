@@ -288,6 +288,7 @@ export default function PlayPage() {
           title={activity.title}
           theme={theme}
           showFeedback={activity.show_feedback}
+          displayMode={(activity.display_mode === "pop" || activity.display_mode === "read") ? activity.display_mode : "pop"}
           onComplete={handleComplete}
         />
       )}

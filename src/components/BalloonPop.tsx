@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { playPopSound, playCorrectSound, playWrongSound } from "@/lib/sounds";
+import { playPopSound, playCorrectSound, playWrongSound, playCardOpenSound, playCelebrationSound } from "@/lib/sounds";
 import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
@@ -17,6 +17,7 @@ export interface BalloonPopProps {
     emoji: string;
   };
   showFeedback?: boolean;
+  displayMode?: "pop" | "read";
   onComplete: (stats: GameStats) => void;
 }
 
@@ -42,7 +43,8 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export default function BalloonPop({ options, title, theme, showFeedback = true, onComplete }: BalloonPopProps) {
+export default function BalloonPop({ options, title, theme, showFeedback = true, displayMode = "pop", onComplete }: BalloonPopProps) {
+  const isReadMode = displayMode === "read";
   const startTime = useRef(Date.now());
   const hasCompletedRef = useRef(false);
   const scoreRef = useRef({ correct: 0, wrong: 0 });
@@ -95,6 +97,8 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
   const [popped, setPopped] = useState<Set<string>>(new Set());
   const [popEffects, setPopEffects] = useState<{ id: string; x: number; y: number; correct: boolean }[]>([]);
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
+  const [revealedBalloon, setRevealedBalloon] = useState<BalloonData | null>(null);
+  const [showReadComplete, setShowReadComplete] = useState(false);
   const correctCount = options.filter((o) => o.isCorrect).length;
 
   const handlePop = useCallback(
@@ -108,45 +112,57 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
         { id: balloon.id, x: balloon.x, y: balloon.y, correct: balloon.isCorrect },
       ]);
 
-      if (balloon.isCorrect) {
-        if (showFeedback) playCorrectSound();
-        setScore((s) => {
-          const next = { ...s, correct: s.correct + 1 };
-          scoreRef.current = next;
-          return next;
-        });
+      if (isReadMode) {
+        setRevealedBalloon(balloon);
+        playCardOpenSound();
       } else {
-        if (showFeedback) playWrongSound();
-        setScore((s) => {
-          const next = { ...s, wrong: s.wrong + 1 };
-          scoreRef.current = next;
-          return next;
-        });
+        if (balloon.isCorrect) {
+          if (showFeedback) playCorrectSound();
+          setScore((s) => {
+            const next = { ...s, correct: s.correct + 1 };
+            scoreRef.current = next;
+            return next;
+          });
+        } else {
+          if (showFeedback) playWrongSound();
+          setScore((s) => {
+            const next = { ...s, wrong: s.wrong + 1 };
+            scoreRef.current = next;
+            return next;
+          });
+        }
       }
 
       setTimeout(() => {
         setPopEffects((prev) => prev.filter((e) => e.id !== balloon.id));
       }, 1000);
     },
-    [popped]
+    [popped, isReadMode, showFeedback]
   );
 
   useEffect(() => {
-    if (score.correct >= correctCount && correctCount > 0 && !hasCompletedRef.current) {
-      hasCompletedRef.current = true;
-      setTimeout(() => {
-        const s = scoreRef.current;
-        const stats: GameStats = {
-          totalItems: options.length,
-          correctCount: s.correct,
-          wrongCount: s.wrong,
-          timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-          completedAt: new Date().toISOString(),
-        };
-        onComplete(stats);
-      }, 800);
+    if (isReadMode) {
+      if (popped.size === balloons.length && !revealedBalloon && !hasCompletedRef.current) {
+        playCelebrationSound();
+        setShowReadComplete(true);
+      }
+    } else {
+      if (score.correct >= correctCount && correctCount > 0 && !hasCompletedRef.current) {
+        hasCompletedRef.current = true;
+        setTimeout(() => {
+          const s = scoreRef.current;
+          const stats: GameStats = {
+            totalItems: options.length,
+            correctCount: s.correct,
+            wrongCount: s.wrong,
+            timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
+            completedAt: new Date().toISOString(),
+          };
+          onComplete(stats);
+        }, 800);
+      }
     }
-  }, [score.correct, correctCount, onComplete, options.length]);
+  }, [score.correct, correctCount, onComplete, options.length, isReadMode, popped.size, balloons.length, revealedBalloon]);
 
   const resetGame = () => {
     setPopped(new Set());
@@ -155,6 +171,8 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
     scoreRef.current = { correct: 0, wrong: 0 };
     hasCompletedRef.current = false;
     startTime.current = Date.now();
+    setRevealedBalloon(null);
+    setShowReadComplete(false);
   };
 
   return (
@@ -167,7 +185,7 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
           <span className="font-heading text-lg font-bold text-[#2D1B69]">{popped.size}</span>
           <span className="text-xs font-bold text-[#8B7BAD]">/ {options.length}</span>
         </div>
-        {showFeedback && score.wrong > 0 && (
+        {!isReadMode && showFeedback && score.wrong > 0 && (
           <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
             <span className="text-lg">💨</span>
             <span className="font-heading text-lg font-bold text-rose-500">{score.wrong}</span>
@@ -176,15 +194,17 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
       </div>
 
       {/* Question / Instruction */}
-      <motion.div
-        className="w-full max-w-lg rounded-2xl bg-white px-5 py-3 text-center shadow-md"
-        style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <p className="font-heading text-base font-bold text-[#2D1B69] sm:text-lg">{title}</p>
-        <p className="mt-1 text-xs font-bold text-[#8B7BAD]">Doğru balonları patlat! 🎯</p>
-      </motion.div>
+      {!isReadMode && (
+        <motion.div
+          className="w-full max-w-lg rounded-2xl bg-white px-5 py-3 text-center shadow-md"
+          style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <p className="font-heading text-base font-bold text-[#2D1B69] sm:text-lg">{title}</p>
+          <p className="mt-1 text-xs font-bold text-[#8B7BAD]">Doğru balonları patlat! 🎯</p>
+        </motion.div>
+      )}
 
       {/* Balloon Area */}
       <div
@@ -207,7 +227,7 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
               exit={{ opacity: 0 }}
               transition={{ duration: 0.8 }}
             >
-              {showFeedback ? (effect.correct ? "✅" : "❌") : "💥"}
+              {isReadMode ? "💥" : showFeedback ? (effect.correct ? "✅" : "❌") : "💥"}
             </motion.div>
           ))}
         </AnimatePresence>
@@ -283,7 +303,7 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
                   {/* Knot */}
                   <polygon points="46,83 50,88 54,83" fill={balloon.color} opacity="0.8" />
                   {/* Text */}
-                  {balloon.text && (
+                  {!isReadMode && balloon.text && (
                     <text
                       x="50"
                       y="48"
@@ -302,7 +322,7 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
                   )}
                 </svg>
                 {/* Image below balloon if provided */}
-                {balloon.imageUrl && (
+                {!isReadMode && balloon.imageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={balloon.imageUrl}

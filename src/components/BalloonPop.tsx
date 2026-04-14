@@ -356,6 +356,55 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
         )}
       </div>
 
+      {/* Read Mode: Revealed Card Modal */}
+      <AnimatePresence>
+        {isReadMode && revealedBalloon && (
+          <motion.div
+            key="read-modal-overlay"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setRevealedBalloon(null)}
+          >
+            <motion.div
+              key="read-modal-card"
+              className="mx-4 flex max-w-sm flex-col items-center gap-4 rounded-3xl p-8 shadow-2xl"
+              style={{
+                backgroundColor: revealedBalloon.color,
+                border: "4px solid rgba(255,255,255,0.3)",
+              }}
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              onClick={() => setRevealedBalloon(null)}
+            >
+              {revealedBalloon.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={revealedBalloon.imageUrl}
+                  alt=""
+                  className="h-32 w-32 rounded-2xl border-4 border-white/30 object-cover shadow-lg"
+                />
+              )}
+              {revealedBalloon.text && (
+                <p
+                  className="text-center font-heading text-3xl font-bold text-white sm:text-4xl"
+                  style={{ textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}
+                >
+                  {revealedBalloon.text}
+                </p>
+              )}
+              <p className="mt-2 text-sm font-semibold text-white/70">
+                Devam etmek için dokunun
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Reset */}
       <button
         type="button"

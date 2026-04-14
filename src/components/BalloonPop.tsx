@@ -143,6 +143,7 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
   useEffect(() => {
     if (isReadMode) {
       if (popped.size === balloons.length && !revealedBalloon && !hasCompletedRef.current) {
+        hasCompletedRef.current = true;
         playCelebrationSound();
         setShowReadComplete(true);
       }

@@ -38,6 +38,7 @@ const ACTIVITY_TYPES: { type: ActivityType; emoji: string; label: string; desc: 
 function getFlowSteps(activityType: ActivityType | null): FlowStep[] {
   if (!activityType) return ["type"];
   if (activityType === "card") return ["type", "display", "theme", "content", "preview"];
+  if (activityType === "balloon-pop") return ["type", "display", "theme", "content", "preview"];
   return ["type", "theme", "content", "preview"];
 }
 
@@ -68,7 +69,7 @@ export default function CreateActivityPage() {
   const { user, loading: authLoading } = useAuth();
   const [currentStep, setCurrentStep] = useState<FlowStep>("type");
   const [activityType, setActivityType] = useState<ActivityType | null>(null);
-  const [displayMode, setDisplayMode] = useState<"grid" | "stack" | null>(null);
+  const [displayMode, setDisplayMode] = useState<"grid" | "stack" | "pop" | "read" | null>(null);
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
@@ -104,18 +105,20 @@ export default function CreateActivityPage() {
     if (type === "card") {
       setDisplayMode(displayMode ?? null);
       setCurrentStep("display");
+    } else if (type === "balloon-pop") {
+      setDisplayMode(displayMode ?? null);
+      setCurrentStep("display");
     } else {
       setDisplayMode(null);
       setCurrentStep("theme");
     }
-    // Reset options for new type
     if (type !== activityType) {
       setOptions([{ id: uuidv4(), text: "" }]);
       setTitle("");
     }
   }
 
-  function confirmDisplayMode(mode: "grid" | "stack") {
+  function confirmDisplayMode(mode: "grid" | "stack" | "pop" | "read") {
     setDisplayMode(mode);
     setCurrentStep("theme");
   }
@@ -150,7 +153,19 @@ export default function CreateActivityPage() {
         );
 
       case "quiz":
+        return (
+          options.length >= 2 &&
+          options.every((o) => o.text.trim() || o.imageUrl) &&
+          options.some((o) => o.isCorrect)
+        );
+
       case "balloon-pop":
+        if (displayMode === "read") {
+          return (
+            options.length >= 2 &&
+            options.every((o) => o.text.trim() || o.imageUrl)
+          );
+        }
         return (
           options.length >= 2 &&
           options.every((o) => o.text.trim() || o.imageUrl) &&
@@ -168,7 +183,7 @@ export default function CreateActivityPage() {
       default:
         return false;
     }
-  }, [activityType, options, groups, title]);
+  }, [activityType, options, groups, title, displayMode]);
 
   function goNextFromContent() {
     if (!contentValid) return;
@@ -258,6 +273,7 @@ export default function CreateActivityPage() {
   async function handleSave() {
     if (!activityType || !selectedThemeId) return;
     if (activityType === "card" && !displayMode) return;
+    if (activityType === "balloon-pop" && !displayMode) return;
 
     const payloadOptions = options
       .filter((o) => o.text.trim().length > 0 || o.imageUrl)
@@ -279,7 +295,7 @@ export default function CreateActivityPage() {
     const body: CreateActivityPayload = {
       title: title.trim() || "Adsız etkinlik",
       type: activityType,
-      display_mode: activityType === "card" ? displayMode : null,
+      display_mode: (activityType === "card" || activityType === "balloon-pop") ? displayMode : null,
       theme: selectedThemeId,
       category: category.trim() || null,
       show_feedback: showFeedback,
@@ -415,54 +431,91 @@ export default function CreateActivityPage() {
             </section>
           )}
 
-          {/* Step: Display (card only) */}
+          {/* Step: Display (card / balloon-pop) */}
           {currentStep === "display" && (
             <section className="animate-slide-up space-y-6" aria-labelledby="step-display-heading">
               <h2 id="step-display-heading" className="sr-only">Görünüm modu</h2>
               <div className="text-center">
                 <h3 className="font-heading text-2xl font-bold text-[#2D1B69] sm:text-3xl">
-                  Kartlar nasıl görünsün?
+                  {activityType === "balloon-pop" ? "Balon modu seçin" : "Kartlar nasıl görünsün?"}
                 </h3>
                 <p className="mt-2 text-sm font-semibold text-[#8B7BAD]">Bir görünüm modu seçin</p>
               </div>
               <div className="grid grid-cols-2 gap-5 pt-2">
-                <button
-                  type="button"
-                  onClick={() => confirmDisplayMode("grid")}
-                  className="card-playful group flex flex-col items-center justify-center gap-4 p-6 py-10 text-center"
-                >
-                  <div className="flex h-24 w-24 items-center justify-center rounded-3xl transition-transform duration-300 group-hover:scale-110"
-                    style={{ background: "linear-gradient(135deg, #E8FFF0, #D6FFE0)" }}
-                  >
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {Array.from({ length: 9 }).map((_, i) => (
-                        <div key={i} className="h-4 w-4 rounded-md bg-[#6BCB77]/60" />
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="font-heading text-xl font-bold text-[#2D1B69]">Izgara</span>
-                    <p className="mt-1 text-xs font-semibold text-[#8B7BAD]">3x3 ızgara düzeni</p>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => confirmDisplayMode("stack")}
-                  className="card-playful group flex flex-col items-center justify-center gap-4 p-6 py-10 text-center"
-                >
-                  <div className="flex h-24 w-24 items-center justify-center rounded-3xl transition-transform duration-300 group-hover:scale-110"
-                    style={{ background: "linear-gradient(135deg, #F3E8FF, #E6D6FF)" }}
-                  >
-                    <div className="flex flex-col items-center gap-0.5">
-                      <div className="h-8 w-12 rounded-lg border-2 border-[#9B59B6]/50 bg-[#9B59B6]/20" />
-                      <div className="h-8 w-12 -translate-y-4 rounded-lg border-2 border-[#9B59B6]/70 bg-[#9B59B6]/30" />
-                    </div>
-                  </div>
-                  <div>
-                    <span className="font-heading text-xl font-bold text-[#2D1B69]">Sıralı</span>
-                    <p className="mt-1 text-xs font-semibold text-[#8B7BAD]">Kartlar sırayla açılır</p>
-                  </div>
-                </button>
+                {activityType === "balloon-pop" ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => confirmDisplayMode("pop")}
+                      className="card-playful group flex flex-col items-center justify-center gap-4 p-6 py-10 text-center"
+                    >
+                      <div className="flex h-24 w-24 items-center justify-center rounded-3xl text-5xl transition-transform duration-300 group-hover:scale-110"
+                        style={{ background: "linear-gradient(135deg, #FFE0EC, #FFD0E0)" }}
+                      >
+                        🎯
+                      </div>
+                      <div>
+                        <span className="font-heading text-xl font-bold text-[#2D1B69]">Balon Patlat</span>
+                        <p className="mt-1 text-xs font-semibold text-[#8B7BAD]">Doğru balonları patlat</p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => confirmDisplayMode("read")}
+                      className="card-playful group flex flex-col items-center justify-center gap-4 p-6 py-10 text-center"
+                    >
+                      <div className="flex h-24 w-24 items-center justify-center rounded-3xl text-5xl transition-transform duration-300 group-hover:scale-110"
+                        style={{ background: "linear-gradient(135deg, #E0EEFF, #D0E0FF)" }}
+                      >
+                        📖
+                      </div>
+                      <div>
+                        <span className="font-heading text-xl font-bold text-[#2D1B69]">Balon Oku</span>
+                        <p className="mt-1 text-xs font-semibold text-[#8B7BAD]">Balonlara tıkla ve oku</p>
+                      </div>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => confirmDisplayMode("grid")}
+                      className="card-playful group flex flex-col items-center justify-center gap-4 p-6 py-10 text-center"
+                    >
+                      <div className="flex h-24 w-24 items-center justify-center rounded-3xl transition-transform duration-300 group-hover:scale-110"
+                        style={{ background: "linear-gradient(135deg, #E8FFF0, #D6FFE0)" }}
+                      >
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {Array.from({ length: 9 }).map((_, i) => (
+                            <div key={i} className="h-4 w-4 rounded-md bg-[#6BCB77]/60" />
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-heading text-xl font-bold text-[#2D1B69]">Izgara</span>
+                        <p className="mt-1 text-xs font-semibold text-[#8B7BAD]">3x3 ızgara düzeni</p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => confirmDisplayMode("stack")}
+                      className="card-playful group flex flex-col items-center justify-center gap-4 p-6 py-10 text-center"
+                    >
+                      <div className="flex h-24 w-24 items-center justify-center rounded-3xl transition-transform duration-300 group-hover:scale-110"
+                        style={{ background: "linear-gradient(135deg, #F3E8FF, #E6D6FF)" }}
+                      >
+                        <div className="flex flex-col items-center gap-0.5">
+                          <div className="h-8 w-12 rounded-lg border-2 border-[#9B59B6]/50 bg-[#9B59B6]/20" />
+                          <div className="h-8 w-12 -translate-y-4 rounded-lg border-2 border-[#9B59B6]/70 bg-[#9B59B6]/30" />
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-heading text-xl font-bold text-[#2D1B69]">Sıralı</span>
+                        <p className="mt-1 text-xs font-semibold text-[#8B7BAD]">Kartlar sırayla açılır</p>
+                      </div>
+                    </button>
+                  </>
+                )}
               </div>
             </section>
           )}
@@ -533,13 +586,15 @@ export default function CreateActivityPage() {
                   {activityType === "group-sort" && "Grupları ve öğelerini belirleyin"}
                   {activityType === "quiz" && "Soruyu ve cevap seçeneklerini ekleyin"}
                   {activityType === "missing-word" && "Cümleyi ve kelime seçeneklerini girin"}
-                  {activityType === "balloon-pop" && "Soruyu ve balonları oluşturun"}
+                  {activityType === "balloon-pop" && displayMode === "read" && "Balonlara eklenecek seçenekleri girin"}
+                  {activityType === "balloon-pop" && displayMode !== "read" && "Soruyu ve balonları oluşturun"}
                   {activityType === "memory" && "Eşleştirilecek kartları ekleyin"}
                   {(activityType === "wheel" || activityType === "card") && "Etkinliğe ad verin ve seçenekleri ekleyin"}
                 </p>
               </div>
 
               {/* Title Input */}
+              {!(activityType === "balloon-pop" && displayMode === "read") && (
               <div className="card-playful p-5">
                 <label htmlFor="activity-title" className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
                   <span>📝</span>
@@ -571,6 +626,7 @@ export default function CreateActivityPage() {
                   </p>
                 )}
               </div>
+              )}
 
               {/* Category */}
               <div className="card-playful p-5">
@@ -588,7 +644,7 @@ export default function CreateActivityPage() {
               </div>
 
               {/* Show Feedback Toggle */}
-              {activityType && ["quiz", "missing-word", "balloon-pop", "match", "group-sort"].includes(activityType) && (
+              {activityType && ["quiz", "missing-word", "balloon-pop", "match", "group-sort"].includes(activityType) && !(activityType === "balloon-pop" && displayMode === "read") && (
                 <div className="card-playful flex items-center justify-between p-5">
                   <div>
                     <div className="flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
@@ -718,7 +774,7 @@ export default function CreateActivityPage() {
                       </span>
                       <div className="flex items-center gap-2">
                         {/* Correct toggle for quiz/missing-word/balloon-pop */}
-                        {(activityType === "quiz" || activityType === "missing-word" || activityType === "balloon-pop") && (
+                        {(activityType === "quiz" || activityType === "missing-word" || (activityType === "balloon-pop" && displayMode !== "read")) && (
                           <button
                             type="button"
                             onClick={() => toggleCorrect(opt.id)}
@@ -900,7 +956,7 @@ export default function CreateActivityPage() {
               {!contentValid && options.length > 0 && (
                 <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 px-4 py-3 text-center text-xs font-bold text-amber-600">
                   ⚠️{" "}
-                  {(activityType === "quiz" || activityType === "missing-word" || activityType === "balloon-pop") &&
+                  {(activityType === "quiz" || activityType === "missing-word" || (activityType === "balloon-pop" && displayMode !== "read")) &&
                     !options.some((o) => o.isCorrect) &&
                     "En az bir doğru cevap işaretleyin. "}
                   {activityType === "missing-word" && !title.includes("___") &&
@@ -939,23 +995,25 @@ export default function CreateActivityPage() {
 
               <div className="card-playful overflow-hidden">
                 <div className="divide-y-3 divide-[#F5F0FF]">
+                  {!(activityType === "balloon-pop" && displayMode === "read") && (
                   <div className="flex items-center justify-between px-5 py-4">
                     <span className="text-sm font-semibold text-[#8B7BAD]">📝 {activityType === "quiz" || activityType === "balloon-pop" ? "Soru" : activityType === "missing-word" ? "Cümle" : "Etkinlik adı"}</span>
                     <span className="font-heading text-sm font-bold text-[#2D1B69]">
                       {title.trim() || "Adsız etkinlik"}
                     </span>
                   </div>
+                  )}
                   <div className="flex items-center justify-between px-5 py-4">
                     <span className="text-sm font-semibold text-[#8B7BAD]">🎯 Tür</span>
                     <span className="font-heading text-sm font-bold text-[#2D1B69]">
                       {typeInfo ? `${typeInfo.emoji} ${typeInfo.label}` : "?"}
                     </span>
                   </div>
-                  {activityType === "card" && displayMode && (
+                  {(activityType === "card" || activityType === "balloon-pop") && displayMode && (
                     <div className="flex items-center justify-between px-5 py-4">
                       <span className="text-sm font-semibold text-[#8B7BAD]">👀 Görünüm</span>
                       <span className="font-heading text-sm font-bold text-[#2D1B69]">
-                        {displayMode === "grid" ? "Izgara (3x3)" : "Sıralı"}
+                        {displayMode === "grid" ? "Izgara (3x3)" : displayMode === "stack" ? "Sıralı" : displayMode === "pop" ? "Balon Patlat" : "Balon Oku"}
                       </span>
                     </div>
                   )}

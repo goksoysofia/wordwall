@@ -113,6 +113,18 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
     handleDrop(id, group);
   };
 
+  const groupCount = groups.length;
+  /** Daha fazla grup = daha sıkı boşluk; hepsi tek satırda kalır. */
+  const groupGapClass =
+    groupCount >= 5 ? "gap-1.5 sm:gap-2" : groupCount >= 4 ? "gap-2 sm:gap-2.5" : "gap-3 sm:gap-4 md:gap-5";
+  const groupPadClass = groupCount >= 4 ? "p-2 sm:p-3" : "p-4";
+  const groupTitleClass =
+    groupCount >= 5
+      ? "mb-2 rounded-xl px-2 py-1.5 text-xs font-extrabold sm:px-3 sm:py-2 sm:text-sm"
+      : groupCount >= 4
+        ? "mb-3 rounded-2xl px-3 py-2 text-sm font-extrabold sm:text-base"
+        : "mb-4 rounded-2xl px-6 py-2.5 text-base font-extrabold sm:text-lg";
+
   const resetGame = () => {
     setRemaining(shuffle(options.filter((o) => o.group)));
     const init: Record<string, typeof options> = {};
@@ -151,7 +163,7 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
 
       {/* Tek sıradaki öğe */}
       {currentItem && (
-        <div className="w-full max-w-md">
+        <div className={currentItem.imageUrl ? "w-full max-w-2xl px-1 sm:px-2" : "w-full max-w-md"}>
           <div className="mb-3 text-center text-xs font-bold uppercase tracking-wider text-[#8B7BAD]">
             Sıra {options.length - remaining.length + 1} / {options.length}
           </div>
@@ -162,7 +174,7 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
               aria-label="Yerleştirilecek öğe"
               className="mx-auto flex max-w-full flex-col items-center overflow-hidden rounded-3xl shadow-lg"
               style={{
-                width: currentItem.imageUrl ? "min(100%, 280px)" : undefined,
+                width: currentItem.imageUrl ? "min(100%, min(42rem, 92vw))" : undefined,
                 border: feedback?.itemId === currentItem.id
                   ? feedback.correct
                     ? "3px solid #22c55e"
@@ -189,7 +201,7 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
                   <img
                     src={currentItem.imageUrl}
                     alt=""
-                    className="h-40 w-full object-cover sm:h-48"
+                    className="h-52 w-full object-cover object-center sm:h-64 md:h-72 lg:h-80"
                   />
                   {currentItem.text && (
                     <span className="w-full px-4 py-3 text-center font-heading text-base font-bold text-[#2D1B69] sm:text-lg">
@@ -207,8 +219,8 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
         </div>
       )}
 
-      {/* Group Buckets */}
-      <div className="grid w-full max-w-3xl gap-5" style={{ gridTemplateColumns: `repeat(${Math.min(groups.length, 3)}, 1fr)` }}>
+      {/* Group Buckets — grup sayısına göre eşit genişlik, tek satır */}
+      <div className={`flex w-full max-w-4xl flex-nowrap items-stretch ${groupGapClass}`}>
         {groups.map((group, gi) => {
           const color = theme.cardColors[gi % theme.cardColors.length];
           const items = sorted[group] || [];
@@ -219,11 +231,10 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
               type="button"
               onClick={() => handleGroupClick(group)}
               disabled={!canPick}
-              className="flex flex-col items-center rounded-3xl p-4 transition-all duration-200 disabled:cursor-default"
+              className={`flex min-h-[140px] min-w-0 flex-1 flex-col items-center rounded-3xl transition-all duration-200 disabled:cursor-default sm:min-h-[160px] ${groupPadClass}`}
               style={{
                 background: `${color}18`,
                 border: canPick ? `3px dashed ${color}` : `3px dashed ${color}50`,
-                minHeight: 160,
                 boxShadow: canPick ? `0 4px 20px ${color}30` : undefined,
               }}
               whileHover={canPick ? { scale: 1.03, borderStyle: "solid" } : undefined}
@@ -231,11 +242,12 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
             >
               {/* Group title */}
               <div
-                className="mb-4 rounded-2xl px-6 py-2.5 font-heading text-base font-extrabold tracking-wide text-white shadow-lg sm:text-lg"
+                className={`w-full max-w-full truncate text-center font-heading tracking-wide text-white shadow-lg ${groupTitleClass}`}
                 style={{
                   background: `linear-gradient(135deg, ${color}, ${color}DD)`,
                   boxShadow: `0 4px 14px ${color}50`,
                 }}
+                title={group}
               >
                 {group}
               </div>

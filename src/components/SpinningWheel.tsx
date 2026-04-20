@@ -23,6 +23,8 @@ const CX = 100;
 const CY = 100;
 const R_OUTER = 92;
 const R_INNER = 38;
+/** Metin dış kenara (ibre ucuna) yapışmasın diye yarıçap oranı — düşük = daha içte */
+const LABEL_RADIUS_RATIO = 0.68;
 const MIN_FULL_SPINS = 5;
 
 /** Sabit ibre: ekranda sol tarafta (SVG koordinatlarında 180° = 9 yön). */
@@ -315,7 +317,7 @@ export default function SpinningWheel({
                           />
                         </g>
                       ) : (() => {
-                        const textR = R_INNER + (R_OUTER - R_INNER) * 0.88;
+                        const textR = R_INNER + (R_OUTER - R_INNER) * LABEL_RADIUS_RATIO;
                         const tp = polarDeg(CX, CY, textR, midDeg);
                         return (
                           <text

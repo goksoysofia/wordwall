@@ -23,8 +23,13 @@ export default function Error({
           Sayfa yüklenirken hata oluştu
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          Tarayıcı konsolunda (F12) ayrıntıya bakabilirsiniz.
+          Bağlantınızı kontrol edin, sayfayı yenileyin veya biraz sonra tekrar deneyin.
         </p>
+        {error.digest != null && (
+          <p className="mt-3 font-mono text-xs text-slate-500">
+            Destek için kod: {error.digest}
+          </p>
+        )}
         <button
           type="button"
           onClick={reset}

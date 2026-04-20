@@ -50,8 +50,10 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
     return init;
   });
   const [feedback, setFeedback] = useState<{ itemId: string; correct: boolean } | null>(null);
-  const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
+
+  /** Sıradaki tek öğe — kullanıcı doğrudan grup seçer; seçim adımı yok. */
+  const currentItem = remaining[0];
 
   const handleDrop = useCallback(
     (itemId: string, targetGroup: string) => {
@@ -73,7 +75,6 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
             [targetGroup]: [...(prev[targetGroup] || []), item],
           }));
           setFeedback(null);
-          setSelectedItem(null);
         }, 400);
       } else {
         if (showFeedback) playWrongSound();
@@ -107,8 +108,9 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
   }, [remaining.length, options.length, onComplete]);
 
   const handleGroupClick = (group: string) => {
-    if (!selectedItem) return;
-    handleDrop(selectedItem, group);
+    const id = remaining[0]?.id;
+    if (!id || feedback) return;
+    handleDrop(id, group);
   };
 
   const resetGame = () => {
@@ -117,7 +119,6 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
     groups.forEach((g) => { init[g] = []; });
     setSorted(init);
     setFeedback(null);
-    setSelectedItem(null);
     setScore({ correct: 0, wrong: 0 });
     scoreRef.current = { correct: 0, wrong: 0 };
     startTime.current = Date.now();
@@ -145,73 +146,64 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
 
       {/* Instruction */}
       <p className="text-center font-heading text-base font-bold text-[#2D1B69]">
-        Bir öğe seç, sonra doğru gruba yerleştir! 📂
+        Bu öğeyi ait olduğu grubu seçerek yerleştir! 📂
       </p>
 
-      {/* Unsorted Items */}
-      {remaining.length > 0 && (
-        <div className="w-full max-w-3xl">
+      {/* Tek sıradaki öğe */}
+      {currentItem && (
+        <div className="w-full max-w-md">
           <div className="mb-3 text-center text-xs font-bold uppercase tracking-wider text-[#8B7BAD]">
-            Yerleştirilecekler ({remaining.length})
+            Sıra {options.length - remaining.length + 1} / {options.length}
           </div>
-          <div className="flex flex-wrap justify-center gap-3">
-            <AnimatePresence>
-              {remaining.map((item) => {
-                const isSelected = selectedItem === item.id;
-                const fb = feedback?.itemId === item.id ? feedback : null;
-                return (
-                  <motion.button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setSelectedItem(isSelected ? null : item.id)}
-                    className="flex flex-col items-center overflow-hidden rounded-2xl transition-all duration-200"
-                    style={{
-                      width: item.imageUrl ? 130 : undefined,
-                      border: fb
-                        ? fb.correct
-                          ? "3px solid #22c55e"
-                          : "3px solid #ef4444"
-                        : isSelected
-                          ? "3px solid #6366f1"
-                          : "3px solid rgba(45, 27, 105, 0.08)",
-                      background: fb
-                        ? fb.correct
-                          ? "#f0fdf4"
-                          : "#fef2f2"
-                        : isSelected
-                          ? "#eef2ff"
-                          : "white",
-                      transform: isSelected ? "scale(1.05)" : undefined,
-                      boxShadow: isSelected ? "0 8px 24px rgba(99,102,241,0.25)" : "0 2px 8px rgba(0,0,0,0.06)",
-                    }}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{
-                      opacity: 1,
-                      scale: fb?.correct === false ? [1, 1.05, 0.95, 1] : 1,
-                    }}
-                    exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.3 } }}
-                    layout
-                  >
-                    {item.imageUrl ? (
-                      <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={item.imageUrl} alt="" className="h-28 w-full object-cover sm:h-32" />
-                        {item.text && (
-                          <span className="w-full truncate px-2 py-2 text-center font-heading text-sm font-bold text-[#2D1B69]">
-                            {item.text}
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="px-5 py-3 font-heading text-sm font-bold text-[#2D1B69]">
-                        {item.text}
-                      </span>
-                    )}
-                  </motion.button>
-                );
-              })}
-            </AnimatePresence>
-          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentItem.id}
+              role="group"
+              aria-label="Yerleştirilecek öğe"
+              className="mx-auto flex max-w-full flex-col items-center overflow-hidden rounded-3xl shadow-lg"
+              style={{
+                width: currentItem.imageUrl ? "min(100%, 280px)" : undefined,
+                border: feedback?.itemId === currentItem.id
+                  ? feedback.correct
+                    ? "3px solid #22c55e"
+                    : "3px solid #ef4444"
+                  : "3px solid rgba(45, 27, 105, 0.08)",
+                background: feedback?.itemId === currentItem.id
+                  ? feedback.correct
+                    ? "#f0fdf4"
+                    : "#fef2f2"
+                  : "white",
+                boxShadow: "0 8px 28px rgba(0,0,0,0.08)",
+              }}
+              initial={{ opacity: 0, y: 16, scale: 0.96 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                scale: feedback?.itemId === currentItem.id && feedback?.correct === false ? [1, 1.04, 0.98, 1] : 1,
+              }}
+              exit={{ opacity: 0, y: -12, scale: 0.95, transition: { duration: 0.25 } }}
+            >
+              {currentItem.imageUrl ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={currentItem.imageUrl}
+                    alt=""
+                    className="h-40 w-full object-cover sm:h-48"
+                  />
+                  {currentItem.text && (
+                    <span className="w-full px-4 py-3 text-center font-heading text-base font-bold text-[#2D1B69] sm:text-lg">
+                      {currentItem.text}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="px-8 py-10 text-center font-heading text-lg font-bold leading-snug text-[#2D1B69] sm:text-xl">
+                  {currentItem.text}
+                </span>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
       )}
 
@@ -220,21 +212,22 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
         {groups.map((group, gi) => {
           const color = theme.cardColors[gi % theme.cardColors.length];
           const items = sorted[group] || [];
+          const canPick = !!currentItem && !feedback;
           return (
             <motion.button
               key={group}
               type="button"
               onClick={() => handleGroupClick(group)}
-              disabled={!selectedItem}
+              disabled={!canPick}
               className="flex flex-col items-center rounded-3xl p-4 transition-all duration-200 disabled:cursor-default"
               style={{
                 background: `${color}18`,
-                border: selectedItem ? `3px dashed ${color}` : `3px dashed ${color}50`,
+                border: canPick ? `3px dashed ${color}` : `3px dashed ${color}50`,
                 minHeight: 160,
-                boxShadow: selectedItem ? `0 4px 20px ${color}30` : undefined,
+                boxShadow: canPick ? `0 4px 20px ${color}30` : undefined,
               }}
-              whileHover={selectedItem ? { scale: 1.03, borderStyle: "solid" } : undefined}
-              whileTap={selectedItem ? { scale: 0.97 } : undefined}
+              whileHover={canPick ? { scale: 1.03, borderStyle: "solid" } : undefined}
+              whileTap={canPick ? { scale: 0.97 } : undefined}
             >
               {/* Group title */}
               <div

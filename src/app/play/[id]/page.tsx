@@ -22,7 +22,7 @@ import StartLiveSession from "@/components/StartLiveSession";
 import type { GameStats } from "@/types/game";
 
 export default function PlayPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams<{ id: string | string[] }>();
   const router = useRouter();
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,10 +34,15 @@ export default function PlayPage() {
   const [showLiveSession, setShowLiveSession] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || (Array.isArray(id) && id.length === 0)) {
+      setError("Geçersiz etkinlik bağlantısı.");
+      setLoading(false);
+      return;
+    }
+    const activityId = Array.isArray(id) ? id[0] : id;
     (async () => {
       try {
-        const res = await fetch(`/api/activities/${id}`);
+        const res = await fetch(`/api/activities/${activityId}`);
         if (!res.ok) {
           setError("Etkinlik bulunamadı.");
           return;
@@ -140,6 +145,12 @@ export default function PlayPage() {
   }
 
   const theme = getTheme(activity.theme);
+  const cardMode =
+    activity.type === "card"
+      ? activity.display_mode === "stack"
+        ? "stack"
+        : "grid"
+      : null;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.backgroundColor }}>
@@ -220,7 +231,7 @@ export default function PlayPage() {
         />
       )}
 
-      {activity.type === "card" && activity.display_mode === "grid" && (
+      {activity.type === "card" && cardMode === "grid" && (
         <CardGrid
           options={activity.options}
           theme={theme}
@@ -228,7 +239,7 @@ export default function PlayPage() {
         />
       )}
 
-      {activity.type === "card" && activity.display_mode === "stack" && (
+      {activity.type === "card" && cardMode === "stack" && (
         <CardStack
           options={activity.options}
           theme={theme}

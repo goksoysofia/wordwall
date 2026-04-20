@@ -59,10 +59,15 @@ export default function EditActivityPage() {
   }, [authLoading, user, router, id]);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || (Array.isArray(id) && id.length === 0)) {
+      setError("Geçersiz etkinlik bağlantısı.");
+      setLoading(false);
+      return;
+    }
+    const activityId = Array.isArray(id) ? id[0] : id;
     (async () => {
       try {
-        const res = await fetch(`/api/activities/${id}`);
+        const res = await fetch(`/api/activities/${activityId}`);
         if (!res.ok) {
           setError("Etkinlik bulunamadı.");
           return;

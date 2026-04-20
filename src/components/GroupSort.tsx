@@ -51,6 +51,8 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
   });
   const [feedback, setFeedback] = useState<{ itemId: string; correct: boolean } | null>(null);
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
+  /** Görsel: tam sığdır (varsayılan) vs alanı doldur (kırpabilir). */
+  const [imageFit, setImageFit] = useState<"contain" | "cover">("contain");
 
   /** Sıradaki tek öğe — kullanıcı doğrudan grup seçer; seçim adımı yok. */
   const currentItem = remaining[0];
@@ -167,6 +169,35 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
           <div className="mb-3 text-center text-xs font-bold uppercase tracking-wider text-[#8B7BAD]">
             Sıra {options.length - remaining.length + 1} / {options.length}
           </div>
+          {currentItem.imageUrl && (
+            <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
+              <span className="w-full text-center text-[11px] font-semibold text-[#8B7BAD] sm:w-auto sm:text-xs">Görüntü:</span>
+              <button
+                type="button"
+                onClick={() => setImageFit("contain")}
+                className={`rounded-xl px-3 py-1.5 font-heading text-xs font-bold transition sm:text-sm ${
+                  imageFit === "contain"
+                    ? "bg-[#6366f1] text-white shadow-md"
+                    : "bg-white/90 text-[#8B7BAD] shadow-sm"
+                }`}
+                style={{ border: imageFit === "contain" ? undefined : "2px solid rgba(45, 27, 105, 0.08)" }}
+              >
+                Tam görüntü
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageFit("cover")}
+                className={`rounded-xl px-3 py-1.5 font-heading text-xs font-bold transition sm:text-sm ${
+                  imageFit === "cover"
+                    ? "bg-[#6366f1] text-white shadow-md"
+                    : "bg-white/90 text-[#8B7BAD] shadow-sm"
+                }`}
+                style={{ border: imageFit === "cover" ? undefined : "2px solid rgba(45, 27, 105, 0.08)" }}
+              >
+                Kadrajı doldur
+              </button>
+            </div>
+          )}
           <AnimatePresence mode="wait">
             <motion.div
               key={currentItem.id}
@@ -197,12 +228,32 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
             >
               {currentItem.imageUrl ? (
                 <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={currentItem.imageUrl}
-                    alt=""
-                    className="h-52 w-full object-cover object-center sm:h-64 md:h-72 lg:h-80"
-                  />
+                  <div
+                    className={
+                      imageFit === "contain"
+                        ? "flex w-full items-center justify-center rounded-t-3xl bg-gradient-to-b from-[#F0EAFF]/90 to-[#E8E4F8]/40 px-1 py-2 sm:px-2 sm:py-3"
+                        : "h-52 w-full overflow-hidden rounded-t-3xl sm:h-64 md:h-72 lg:h-80"
+                    }
+                    style={
+                      imageFit === "contain"
+                        ? {
+                            minHeight: "min(28vh, 220px)",
+                            maxHeight: "min(68vh, 440px)",
+                          }
+                        : undefined
+                    }
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={currentItem.imageUrl}
+                      alt=""
+                      className={
+                        imageFit === "contain"
+                          ? "max-h-[min(62vh,26rem)] w-full max-w-full object-contain object-center p-1 sm:max-h-[min(65vh,28rem)]"
+                          : "h-full w-full object-cover object-center"
+                      }
+                    />
+                  </div>
                   {currentItem.text && (
                     <span className="w-full px-4 py-3 text-center font-heading text-base font-bold text-[#2D1B69] sm:text-lg">
                       {currentItem.text}
@@ -263,8 +314,14 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
                     >
                       {item.imageUrl ? (
                         <>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={item.imageUrl} alt="" className="h-16 w-full object-cover sm:h-20" />
+                          <div className="flex h-16 w-full max-w-[90px] items-center justify-center bg-[#faf8ff] sm:h-20">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={item.imageUrl}
+                              alt=""
+                              className="max-h-full max-w-full object-contain object-center"
+                            />
+                          </div>
                           {item.text && (
                             <span className="w-full truncate px-1.5 py-1 text-center text-[11px] font-bold text-[#2D1B69]">
                               {item.text}

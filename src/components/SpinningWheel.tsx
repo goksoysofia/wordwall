@@ -15,6 +15,8 @@ export interface SpinningWheelProps {
     wheelColors: string[];
     decorEmojis: string[];
     celebrationText: string;
+    /** Açık dilimlerde etiket rengi (ör. 23 Nisan beyaz dilim) */
+    accentColor?: string;
   };
   onComplete: (stats: GameStats) => void;
 }
@@ -70,6 +72,45 @@ function truncateLabel(text: string, maxLen: number): string {
   const t = text.trim();
   if (t.length <= maxLen) return t;
   return `${t.slice(0, Math.max(1, maxLen - 1))}…`;
+}
+
+function parseHexRgb(hex: string): [number, number, number] | null {
+  const m = hex.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (!m) return null;
+  let h = m[1];
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const n = parseInt(h, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function srgbChannelToLinear(c: number): number {
+  const x = c / 255;
+  return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+}
+
+/** WCAG göre göreli parlaklık (0–1); yüksek = açık zemin */
+function colorLuminance(hex: string): number | null {
+  const rgb = parseHexRgb(hex);
+  if (!rgb) return null;
+  const [r, g, b] = rgb.map(srgbChannelToLinear);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function isLightSliceFill(hex: string): boolean {
+  const L = colorLuminance(hex);
+  if (L == null) return false;
+  return L >= 0.55;
+}
+
+/** Açık dilimde okunaklı, temayla uyumlu koyu etiket rengi */
+function wheelSliceLabelColor(sliceFill: string, accent: string | undefined, palette: string[]): string {
+  if (!isLightSliceFill(sliceFill)) return "#ffffff";
+  const candidates = [accent, ...palette].filter((c): c is string => Boolean(c));
+  for (const c of candidates) {
+    const L = colorLuminance(c);
+    if (L != null && L < 0.55) return c;
+  }
+  return "#2D1B69";
 }
 
 /** Custom ease-out curve matching cubic-bezier(0.22, 1, 0.36, 1) */
@@ -319,13 +360,14 @@ export default function SpinningWheel({
                       ) : (() => {
                         const textR = R_INNER + (R_OUTER - R_INNER) * LABEL_RADIUS_RATIO;
                         const tp = polarDeg(CX, CY, textR, midDeg);
+                        const labelFill = wheelSliceLabelColor(fill, theme.accentColor, wheelColors);
                         return (
                           <text
                             x={tp.x}
                             y={tp.y}
                             textAnchor="start"
                             dominantBaseline="middle"
-                            fill="white"
+                            fill={labelFill}
                             fontSize={n <= 4 ? 11 : n <= 8 ? 9 : 7.5}
                             fontWeight="800"
                             fontFamily="'Nunito', system-ui, sans-serif"

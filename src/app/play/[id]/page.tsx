@@ -41,17 +41,27 @@ export default function PlayPage() {
     }
     const activityId = Array.isArray(id) ? id[0] : id;
     (async () => {
+      const controller = new AbortController();
+      const timeoutMs = 20000;
+      const t = window.setTimeout(() => controller.abort(), timeoutMs);
       try {
-        const res = await fetch(`/api/activities/${activityId}`);
+        const res = await fetch(`/api/activities/${activityId}`, {
+          signal: controller.signal,
+        });
         if (!res.ok) {
           setError("Etkinlik bulunamadı.");
           return;
         }
         const data = await res.json();
         setActivity(data);
-      } catch {
-        setError("Bağlantı hatası.");
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") {
+          setError("Sunucu çok geç yanıt verdi. Ağı kontrol edip yeniden deneyin.");
+        } else {
+          setError("Bağlantı hatası.");
+        }
       } finally {
+        window.clearTimeout(t);
         setLoading(false);
       }
     })();

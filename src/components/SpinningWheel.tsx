@@ -25,6 +25,9 @@ const R_OUTER = 92;
 const R_INNER = 38;
 const MIN_FULL_SPINS = 5;
 
+/** Sabit ibre: ekranda sol tarafta (SVG koordinatlarında 180° = 9 yön). */
+const POINTER_ANGLE_DEG = 180;
+
 function shuffle<T>(items: T[]): T[] {
   const a = [...items];
   for (let i = a.length - 1; i > 0; i--) {
@@ -120,7 +123,7 @@ export default function SpinningWheel({
   }, []);
 
   const maxLabelLen = useMemo(() => {
-    // Radial text has more room along the radius
+    // Yatay yazı için makul karakter sınırı
     if (n <= 0) return 14;
     if (n <= 4) return 14;
     if (n <= 8) return 12;
@@ -141,10 +144,12 @@ export default function SpinningWheel({
 
       setRotation(currentRot);
 
-      // Tick sound on slice boundary crossing
+      // Tick sound on slice boundary crossing (ibre sol tarafta → ibre altındaki dilim)
       if (n > 0) {
         const normalizedDeg = ((currentRot % 360) + 360) % 360;
-        const currentSlice = Math.floor(normalizedDeg / sliceDeg) % n;
+        const w = ((POINTER_ANGLE_DEG - normalizedDeg) % 360 + 360) % 360;
+        const wShifted = (w + 90 + 360) % 360;
+        const currentSlice = Math.floor(wShifted / sliceDeg) % n;
         if (currentSlice !== lastSliceIndex.current && lastSliceIndex.current !== -1) {
           playTickSound();
         }
@@ -174,9 +179,9 @@ export default function SpinningWheel({
 
     const current = rotation;
     const winner = Math.floor(Math.random() * n);
-    // The pointer is at top (-90°). Slice i center is at -90 + i*sliceDeg + sliceDeg/2.
-    // To align slice center with pointer, we need rotation = -(i*sliceDeg + sliceDeg/2).
-    const targetMod = (360 - (winner * sliceDeg + sliceDeg / 2) + 360) % 360;
+    // İbre solda (180°). Dilim merkezi midDeg = -90 + (i+0.5)*sliceDeg; midDeg + rotation ≡ 180 (mod 360).
+    const targetMod =
+      ((POINTER_ANGLE_DEG + 90 - (winner * sliceDeg + sliceDeg / 2)) % 360 + 360) % 360;
     const currentMod = ((current % 360) + 360) % 360;
     let delta = (targetMod - currentMod + 360) % 360;
     if (delta < 1) delta += 360;
@@ -228,15 +233,15 @@ export default function SpinningWheel({
       style={{ backgroundColor: theme.backgroundColor }}
     >
       <ThemedBackground decorEmojis={theme.decorEmojis} backgroundColor={theme.backgroundColor} />
-      <div className="relative w-full max-w-[min(100%,520px)] aspect-square">
-        {/* Pointer */}
+      <div className="relative z-10 w-full max-w-[min(100%,520px)] overflow-visible pl-2 pr-1 aspect-square">
+        {/* Pointer — sol tarafta, merkeze doğru */}
         <div
-          className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1"
+          className="pointer-events-none absolute left-2 top-1/2 z-20 -translate-y-1/2 sm:left-3"
           aria-hidden
         >
-          <svg width="40" height="32" viewBox="0 0 40 32" className="drop-shadow-lg">
+          <svg width="36" height="40" viewBox="0 0 36 40" className="drop-shadow-lg">
             <polygon
-              points="20,30 4,4 36,4"
+              points="32,20 8,6 8,34"
               fill="#2D1B69"
               stroke="#FFD93D"
               strokeWidth="3"
@@ -295,7 +300,7 @@ export default function SpinningWheel({
                       />
                       {opt.imageUrl ? (
                         <g
-                          transform={`translate(${imgPos.x}, ${imgPos.y}) rotate(${midDeg + 90})`}
+                          transform={`translate(${imgPos.x}, ${imgPos.y}) rotate(${-rotation})`}
                         >
                           <image
                             href={opt.imageUrl}
@@ -316,13 +321,13 @@ export default function SpinningWheel({
                           <text
                             x={tp.x}
                             y={tp.y}
-                            textAnchor="start"
+                            textAnchor="middle"
                             dominantBaseline="middle"
                             fill="white"
                             fontSize={n <= 4 ? 11 : n <= 8 ? 9 : 7.5}
                             fontWeight="800"
                             fontFamily="'Nunito', system-ui, sans-serif"
-                            transform={`rotate(${midDeg + 180}, ${tp.x}, ${tp.y})`}
+                            transform={`rotate(${-rotation}, ${tp.x}, ${tp.y})`}
                             style={{ filter: "url(#wheelTextShadow)" }}
                           >
                             {label}

@@ -42,7 +42,7 @@ export default function ThemedBackground({ decorEmojis }: ThemedBackgroundProps)
         }
       `}</style>
       <div
-        className="pointer-events-none absolute inset-0 overflow-hidden"
+        className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
         aria-hidden="true"
       >
         {items.map((item, i) => (

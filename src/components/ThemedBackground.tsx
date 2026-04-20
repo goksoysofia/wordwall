@@ -8,18 +8,18 @@ interface ThemedBackgroundProps {
 }
 
 const POSITIONS: { top: string; left?: string; right?: string; size: string; rotate: number; delay: number }[] = [
-  { top: "3%", left: "2%", size: "1.8rem", rotate: -15, delay: 0 },
-  { top: "8%", right: "4%", size: "1.4rem", rotate: 20, delay: 1.2 },
-  { top: "18%", left: "5%", size: "1.2rem", rotate: 10, delay: 2.5 },
-  { top: "25%", right: "3%", size: "1.6rem", rotate: -25, delay: 0.8 },
-  { top: "38%", left: "1%", size: "1.5rem", rotate: 15, delay: 3.1 },
-  { top: "45%", right: "2%", size: "1.3rem", rotate: -10, delay: 1.8 },
-  { top: "55%", left: "4%", size: "1.7rem", rotate: 30, delay: 0.4 },
-  { top: "62%", right: "5%", size: "1.2rem", rotate: -20, delay: 2.2 },
-  { top: "72%", left: "2%", size: "1.4rem", rotate: 5, delay: 3.5 },
-  { top: "78%", right: "3%", size: "1.6rem", rotate: -12, delay: 1.5 },
-  { top: "88%", left: "6%", size: "1.3rem", rotate: 22, delay: 2.8 },
-  { top: "92%", right: "4%", size: "1.5rem", rotate: -8, delay: 0.6 },
+  { top: "3%", left: "2%", size: "2.65rem", rotate: -15, delay: 0 },
+  { top: "8%", right: "4%", size: "2.1rem", rotate: 20, delay: 1.2 },
+  { top: "18%", left: "5%", size: "1.85rem", rotate: 10, delay: 2.5 },
+  { top: "25%", right: "3%", size: "2.35rem", rotate: -25, delay: 0.8 },
+  { top: "38%", left: "1%", size: "2.2rem", rotate: 15, delay: 3.1 },
+  { top: "45%", right: "2%", size: "1.95rem", rotate: -10, delay: 1.8 },
+  { top: "55%", left: "4%", size: "2.5rem", rotate: 30, delay: 0.4 },
+  { top: "62%", right: "5%", size: "1.85rem", rotate: -20, delay: 2.2 },
+  { top: "72%", left: "2%", size: "2.1rem", rotate: 5, delay: 3.5 },
+  { top: "78%", right: "3%", size: "2.35rem", rotate: -12, delay: 1.5 },
+  { top: "88%", left: "6%", size: "1.95rem", rotate: 22, delay: 2.8 },
+  { top: "92%", right: "4%", size: "2.2rem", rotate: -8, delay: 0.6 },
 ];
 
 export default function ThemedBackground({ decorEmojis }: ThemedBackgroundProps) {
@@ -54,10 +54,10 @@ export default function ThemedBackground({ decorEmojis }: ThemedBackgroundProps)
               left: item.left,
               right: item.right,
               fontSize: item.size,
-              opacity: 0.1,
+              opacity: 0.5,
               transform: `rotate(${item.rotate}deg)`,
               animation: `themed-drift 6s ease-in-out ${item.delay}s infinite`,
-              filter: "grayscale(20%)",
+              filter: "grayscale(10%)",
             }}
           >
             {item.emoji}

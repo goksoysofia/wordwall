@@ -123,7 +123,7 @@ export default function SpinningWheel({
   }, []);
 
   const maxLabelLen = useMemo(() => {
-    // Yatay yazı için makul karakter sınırı
+    // Radial text has more room along the radius
     if (n <= 0) return 14;
     if (n <= 4) return 14;
     if (n <= 8) return 12;
@@ -300,7 +300,7 @@ export default function SpinningWheel({
                       />
                       {opt.imageUrl ? (
                         <g
-                          transform={`translate(${imgPos.x}, ${imgPos.y}) rotate(${-rotation})`}
+                          transform={`translate(${imgPos.x}, ${imgPos.y}) rotate(${midDeg + 90})`}
                         >
                           <image
                             href={opt.imageUrl}
@@ -321,13 +321,13 @@ export default function SpinningWheel({
                           <text
                             x={tp.x}
                             y={tp.y}
-                            textAnchor="middle"
+                            textAnchor="start"
                             dominantBaseline="middle"
                             fill="white"
                             fontSize={n <= 4 ? 11 : n <= 8 ? 9 : 7.5}
                             fontWeight="800"
                             fontFamily="'Nunito', system-ui, sans-serif"
-                            transform={`rotate(${-rotation}, ${tp.x}, ${tp.y})`}
+                            transform={`rotate(${midDeg + 180}, ${tp.x}, ${tp.y})`}
                             style={{ filter: "url(#wheelTextShadow)" }}
                           >
                             {label}

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { playCorrectSound, playWrongSound } from "@/lib/sounds";
-import type { GameStats } from "@/types/game";
+import type { GameStats, WrongItem } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 export interface QuizProps {
@@ -24,6 +24,7 @@ export default function Quiz({ options, title, theme, showFeedback = true, onCom
   const startTime = useRef(Date.now());
   const scoreRef = useRef({ correct: 0, wrong: 0, total: 0 });
   const hasCompletedRef = useRef(false);
+  const wrongItemsRef = useRef<WrongItem[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
@@ -49,6 +50,14 @@ export default function Quiz({ options, title, theme, showFeedback = true, onCom
         scoreRef.current = { ...scoreRef.current, wrong: scoreRef.current.wrong + 1, total: scoreRef.current.total + 1 };
         setScore({ ...scoreRef.current });
         setAttempts((a) => a + 1);
+
+        const selectedText = option?.text || '';
+        const correctOpt = options.find((o) => o.isCorrect);
+        wrongItemsRef.current.push({
+          text: title,
+          correctAnswer: correctOpt?.text || '',
+          userAnswer: selectedText
+        });
       }
     },
     [answered, options, showFeedback]
@@ -69,6 +78,7 @@ export default function Quiz({ options, title, theme, showFeedback = true, onCom
       wrongCount: scoreRef.current.wrong,
       timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
       completedAt: new Date().toISOString(),
+      wrongItems: wrongItemsRef.current,
     };
     const t = setTimeout(() => onComplete(stats), 1500);
     return () => clearTimeout(t);
@@ -112,6 +122,7 @@ export default function Quiz({ options, title, theme, showFeedback = true, onCom
     setAnswered(false);
     setIsCorrect(false);
     setScore({ correct: 0, wrong: 0, total: 0 });
+    wrongItemsRef.current = [];
     startTime.current = Date.now();
   };
 

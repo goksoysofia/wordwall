@@ -154,6 +154,7 @@ export default function SpinningWheel({
         wrongCount: 0,
         timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
         completedAt: new Date().toISOString(),
+        wrongItems: [],
       });
     }
   }, [remaining.length]);

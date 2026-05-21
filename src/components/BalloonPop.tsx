@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playPopSound, playCorrectSound, playWrongSound, playCardOpenSound, playCelebrationSound } from "@/lib/sounds";
-import type { GameStats } from "@/types/game";
+import type { GameStats, WrongItem } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 export interface BalloonPopProps {
@@ -48,6 +48,7 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
   const startTime = useRef(Date.now());
   const hasCompletedRef = useRef(false);
   const scoreRef = useRef({ correct: 0, wrong: 0 });
+  const wrongItemsRef = useRef<WrongItem[]>([]);
 
   // Stable random values per option id, stored in a ref so they don't change on re-render
   const randomsRef = useRef<Map<string, { yOffset: number; floatRange: number }>>(new Map());
@@ -130,6 +131,10 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
             scoreRef.current = next;
             return next;
           });
+          wrongItemsRef.current.push({
+            text: balloon.text || "Balon",
+            userAnswer: "Yanlış balon patlatıldı"
+          });
         }
       }
 
@@ -158,6 +163,7 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
             wrongCount: s.wrong,
             timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
             completedAt: new Date().toISOString(),
+            wrongItems: wrongItemsRef.current,
           };
           onComplete(stats);
         }, 800);
@@ -170,6 +176,7 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
     setPopEffects([]);
     setScore({ correct: 0, wrong: 0 });
     scoreRef.current = { correct: 0, wrong: 0 };
+    wrongItemsRef.current = [];
     hasCompletedRef.current = false;
     startTime.current = Date.now();
     setRevealedBalloon(null);

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playCorrectSound, playWrongSound } from "@/lib/sounds";
-import type { GameStats } from "@/types/game";
+import type { GameStats, WrongItem } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 export interface GroupSortProps {
@@ -32,6 +32,7 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
   const startTime = useRef(Date.now());
   const scoreRef = useRef({ correct: 0, wrong: 0 });
   const hasCompleted = useRef(false);
+  const wrongItemsRef = useRef<WrongItem[]>([]);
   const groups = useMemo(() => {
     const set = new Set<string>();
     options.forEach((o) => { if (o.group) set.add(o.group); });
@@ -86,6 +87,13 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
           scoreRef.current = next;
           return next;
         });
+
+        wrongItemsRef.current.push({
+          text: item.text || 'Öğe',
+          correctAnswer: item.group || 'Doğru Grup Belirtilmemiş',
+          userAnswer: targetGroup,
+        });
+
         setTimeout(() => {
           setFeedback(null);
         }, 600);
@@ -104,6 +112,7 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
         wrongCount: s.wrong,
         timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
         completedAt: new Date().toISOString(),
+        wrongItems: wrongItemsRef.current,
       };
       setTimeout(() => onComplete(stats), 600);
     }
@@ -135,6 +144,7 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
     setFeedback(null);
     setScore({ correct: 0, wrong: 0 });
     scoreRef.current = { correct: 0, wrong: 0 };
+    wrongItemsRef.current = [];
     startTime.current = Date.now();
     hasCompleted.current = false;
   };

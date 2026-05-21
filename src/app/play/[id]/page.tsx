@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import type { Activity } from "@/types/activity";
 import { getTheme } from "@/lib/themes";
 import { isNative } from "@/lib/platform";
@@ -19,6 +20,7 @@ import Celebration from "@/components/Celebration";
 import ResultsScreen from "@/components/ResultsScreen";
 import PrintView from "@/components/PrintView";
 import StartLiveSession from "@/components/StartLiveSession";
+import ThemedBackground from "@/components/ThemedBackground";
 import type { GameStats } from "@/types/game";
 
 export default function PlayPage() {
@@ -32,6 +34,8 @@ export default function PlayPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
   const [showLiveSession, setShowLiveSession] = useState(false);
+  const [playerName, setPlayerName] = useState("");
+  const [nameSubmitted, setNameSubmitted] = useState(false);
 
   useEffect(() => {
     if (!id || (Array.isArray(id) && id.length === 0)) {
@@ -70,7 +74,21 @@ export default function PlayPage() {
   const handleComplete = useCallback((stats: GameStats) => {
     setGameStats(stats);
     setShowCelebration(true);
-  }, []);
+
+    if (activity?.id) {
+      fetch("/api/notify-completion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          activityId: activity.id,
+          playerName: playerName.trim(),
+          stats,
+        }),
+      }).catch((err) => {
+        console.error("[notify-completion] Error:", err);
+      });
+    }
+  }, [activity?.id, playerName]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -161,6 +179,65 @@ export default function PlayPage() {
         ? "stack"
         : "grid"
       : null;
+
+  if (activity && !nameSubmitted) {
+    return (
+      <div
+        className="flex min-h-screen items-center justify-center p-4 relative overflow-hidden"
+        style={{ backgroundColor: theme.backgroundColor }}
+      >
+        <ThemedBackground decorEmojis={theme.decorEmojis} backgroundColor={theme.backgroundColor} />
+        
+        <motion.div
+          className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl text-center relative z-10 border-4 border-white/80"
+          initial={{ opacity: 0, scale: 0.9, y: 30 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ type: "spring", duration: 0.6 }}
+        >
+          <div className="text-6xl mb-4 animate-bounce">👋</div>
+          
+          <h2 className="font-heading text-2xl font-extrabold text-[#2D1B69] mb-2 sm:text-3xl">
+            Hoş Geldin!
+          </h2>
+          
+          <p className="text-[#8B7BAD] font-bold text-sm sm:text-base mb-6">
+            Oyuna başlamadan önce lütfen adını yaz:
+          </p>
+          
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (playerName.trim().length >= 2) {
+              setNameSubmitted(true);
+            }
+          }}>
+            <div className="relative mb-6">
+              <input
+                type="text"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                placeholder="Adın ve Soyadın..."
+                maxLength={40}
+                required
+                autoFocus
+                className="w-full rounded-2xl border-3 border-indigo-100 bg-slate-50 px-5 py-4 text-center font-heading text-lg font-bold text-[#2D1B69] placeholder:text-[#8B7BAD]/60 focus:border-[#FF6B9D] focus:bg-white focus:outline-none transition-all duration-300"
+              />
+            </div>
+            
+            <button
+              type="submit"
+              disabled={playerName.trim().length < 2}
+              className="w-full py-4 rounded-2xl font-heading text-lg font-bold text-white shadow-lg transition-all duration-300 disabled:opacity-50 disabled:shadow-none enabled:hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              }}
+            >
+              Başla 🎮
+            </button>
+          </form>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.backgroundColor }}>

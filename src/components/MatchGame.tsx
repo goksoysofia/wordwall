@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playWrongSound, playMatchSound } from "@/lib/sounds";
-import type { GameStats } from "@/types/game";
+import type { GameStats, WrongItem } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 export interface MatchGameProps {
@@ -53,6 +53,7 @@ export default function MatchGame({ options, theme, showFeedback = true, onCompl
   const scoreRef = useRef({ correct: 0, wrong: 0 });
   const hasCompleted = useRef(false);
   const wrongPairTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrongItemsRef = useRef<WrongItem[]>([]);
 
   const leftItems = useMemo<MatchItem[]>(
     () =>
@@ -106,6 +107,13 @@ export default function MatchGame({ options, theme, showFeedback = true, onCompl
         setWrongPair({ left: leftId, right: rightId });
         scoreRef.current = { ...scoreRef.current, wrong: scoreRef.current.wrong + 1 };
         setScore({ ...scoreRef.current });
+
+        wrongItemsRef.current.push({
+          text: leftItem.text || 'Sol Öğe',
+          correctAnswer: `Eşi: ${rightItems.find((r) => r.originalId === leftItem.originalId)?.text || 'Bilinmiyor'}`,
+          userAnswer: rightItem.text || 'Sağ Öğe',
+        });
+
         wrongPairTimeoutRef.current = setTimeout(() => {
           setWrongPair(null);
           setSelectedLeft(null);
@@ -132,6 +140,7 @@ export default function MatchGame({ options, theme, showFeedback = true, onCompl
         wrongCount: scoreRef.current.wrong,
         timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
         completedAt: new Date().toISOString(),
+        wrongItems: wrongItemsRef.current,
       };
       setTimeout(() => onComplete(stats), 500);
     }
@@ -175,6 +184,7 @@ export default function MatchGame({ options, theme, showFeedback = true, onCompl
     setWrongPair(null);
     scoreRef.current = { correct: 0, wrong: 0 };
     setScore({ correct: 0, wrong: 0 });
+    wrongItemsRef.current = [];
     setRightItems(buildRightItems(options));
     startTime.current = Date.now();
     hasCompleted.current = false;

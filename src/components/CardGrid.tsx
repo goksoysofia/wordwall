@@ -75,6 +75,7 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
         wrongCount: 0,
         timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
         completedAt: new Date().toISOString(),
+        wrongItems: [],
       });
     }
   }, [openedIds.size, options.length, onComplete]);

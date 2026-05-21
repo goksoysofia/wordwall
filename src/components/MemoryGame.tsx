@@ -102,6 +102,7 @@ export default function MemoryGame({ options, theme, onComplete }: MemoryGamePro
         wrongCount: moves - matched.size,
         timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
         completedAt: new Date().toISOString(),
+        wrongItems: [],
       };
       setTimeout(() => onComplete(stats), 600);
     }

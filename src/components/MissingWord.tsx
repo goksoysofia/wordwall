@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { playCorrectSound, playWrongSound } from "@/lib/sounds";
-import type { GameStats } from "@/types/game";
+import type { GameStats, WrongItem } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 export interface MissingWordProps {
@@ -24,6 +24,7 @@ export default function MissingWord({ options, title, theme, showFeedback = true
   const startTime = useRef(Date.now());
   const wrongCountRef = useRef(0);
   const hasCompleted = useRef(false);
+  const wrongItemsRef = useRef<WrongItem[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
@@ -56,6 +57,13 @@ export default function MissingWord({ options, title, theme, showFeedback = true
     } else {
       if (showFeedback) playWrongSound();
       wrongCountRef.current += 1;
+
+      const selectedOpt = options.find((o) => o.id === selected);
+      wrongItemsRef.current.push({
+        text: title,
+        correctAnswer: correctOption?.text || '',
+        userAnswer: selectedOpt?.text || '',
+      });
     }
   }, [selected, answered, options, showFeedback]);
 
@@ -72,6 +80,7 @@ export default function MissingWord({ options, title, theme, showFeedback = true
       wrongCount: wrongCountRef.current,
       timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
       completedAt: new Date().toISOString(),
+      wrongItems: wrongItemsRef.current,
     };
     const t = setTimeout(() => onComplete(stats), 1500);
     return () => clearTimeout(t);
@@ -82,6 +91,7 @@ export default function MissingWord({ options, title, theme, showFeedback = true
     setAnswered(false);
     setIsCorrect(false);
     wrongCountRef.current = 0;
+    wrongItemsRef.current = [];
     startTime.current = Date.now();
     hasCompleted.current = false;
   };

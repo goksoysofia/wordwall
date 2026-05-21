@@ -2,10 +2,9 @@
 
 import { motion } from "framer-motion";
 import type { GameStats } from "@/types/game";
-import { isNative } from '@/lib/platform';
 
 export interface ResultsScreenProps {
-  stats: GameStats;
+  stats: GameStats; // Kept in interface to prevent breaking TS signature elsewhere
   activityTitle: string;
   themeEmoji: string;
   activityId: string;
@@ -13,83 +12,33 @@ export interface ResultsScreenProps {
   onBack: () => void;
 }
 
-function formatTime(seconds: number): string {
-  if (seconds < 60) {
-    return `${seconds} saniye`;
-  }
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  if (secs === 0) {
-    return `${mins} dakika`;
-  }
-  return `${mins} dakika ${secs} saniye`;
-}
-
-function getEncouragementMessage(accuracy: number): string {
-  if (accuracy === 100) return "Mükemmel! 🏆";
-  if (accuracy >= 80) return "Harikasın! 🌟";
-  if (accuracy >= 60) return "Çok iyi! 💪";
-  return "İyi deneme! Tekrar deneyelim 🎯";
-}
-
-function getProgressBarColor(accuracy: number): string {
-  if (accuracy > 80) return "#6BCB77";
-  if (accuracy > 60) return "#FFD93D";
-  return "#FF5252";
-}
-
 const containerVariants = {
-  hidden: { opacity: 0 },
+  hidden: { opacity: 0, scale: 0.95 },
   visible: {
     opacity: 1,
+    scale: 1,
     transition: {
-      staggerChildren: 0.12,
+      staggerChildren: 0.15,
       delayChildren: 0.1,
     },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 28, scale: 0.95 },
+  hidden: { opacity: 0, y: 30 },
   visible: {
     opacity: 1,
     y: 0,
-    scale: 1,
-    transition: { type: "spring" as const, stiffness: 260, damping: 20 },
+    transition: { type: "spring" as const, stiffness: 200, damping: 18 },
   },
 };
 
 export default function ResultsScreen({
-  stats,
   activityTitle,
   themeEmoji,
-  activityId,
   onReplay,
   onBack,
 }: ResultsScreenProps) {
-  const accuracy =
-    stats.totalItems > 0
-      ? Math.round((stats.correctCount / stats.totalItems) * 100)
-      : 0;
-
-  const encouragement = getEncouragementMessage(accuracy);
-  const progressColor = getProgressBarColor(accuracy);
-
-  const handleShare = async () => {
-    const shareData = {
-      title: activityTitle,
-      text: `${activityTitle} — ${accuracy}% başarı oranı ile tamamladım!`,
-      url: `${window.location.origin}/play/${activityId}`,
-    };
-
-    if (isNative()) {
-      const { Share } = await import('@capacitor/share');
-      await Share.share(shareData);
-    } else if (navigator.share) {
-      await navigator.share(shareData);
-    }
-  };
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#FFF8F0] bg-dots-pattern px-4 py-10">
       <motion.div
@@ -98,157 +47,77 @@ export default function ResultsScreen({
         initial="hidden"
         animate="visible"
       >
-        {/* Header */}
+        {/* Main Celebration Card */}
         <motion.div
           variants={itemVariants}
-          className="mb-6 flex flex-col items-center gap-2 text-center"
+          className="relative overflow-hidden rounded-3xl bg-white p-8 text-center shadow-2xl border-2 border-[rgba(45,27,105,0.05)] flex flex-col items-center gap-6"
         >
-          <motion.div
-            className="mb-2 text-6xl"
-            animate={{ rotate: [0, -8, 8, -4, 4, 0] }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-            {themeEmoji}
-          </motion.div>
-          <h1 className="font-heading text-3xl font-bold text-[#2D1B69]">
-            Oyun Bitti!
-          </h1>
-          <p className="font-heading text-base font-semibold text-[#8B7BAD]">
-            {activityTitle}
-          </p>
-        </motion.div>
+          {/* Animated decorative backgrounds */}
+          <div className="absolute -top-12 -left-12 h-24 w-24 rounded-full bg-[#FFE8F5] opacity-60 blur-xl pointer-events-none" />
+          <div className="absolute -bottom-12 -right-12 h-28 w-28 rounded-full bg-[#E8F4FD] opacity-70 blur-xl pointer-events-none" />
 
-        {/* Encouragement Banner */}
-        <motion.div
-          variants={itemVariants}
-          className="mb-5 rounded-3xl bg-white px-6 py-4 text-center shadow-xl"
-          style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}
-        >
-          <p className="font-heading text-2xl font-bold text-[#FF6B9D]">
-            {encouragement}
-          </p>
-        </motion.div>
-
-        {/* Stats Cards */}
-        <div className="mb-5 grid grid-cols-2 gap-3">
-          {/* Correct */}
-          <motion.div
-            variants={itemVariants}
-            className="flex flex-col items-center gap-1 rounded-3xl bg-white px-4 py-5 shadow-xl"
-            style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}
-          >
-            <span className="text-3xl">✅</span>
-            <span className="font-heading text-3xl font-bold text-[#6BCB77]">
-              {stats.correctCount}
-            </span>
-            <span className="font-heading text-sm font-semibold text-[#8B7BAD]">
-              Doğru
-            </span>
-          </motion.div>
-
-          {/* Wrong */}
-          <motion.div
-            variants={itemVariants}
-            className="flex flex-col items-center gap-1 rounded-3xl bg-white px-4 py-5 shadow-xl"
-            style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}
-          >
-            <span className="text-3xl">❌</span>
-            <span className="font-heading text-3xl font-bold text-[#FF5252]">
-              {stats.wrongCount}
-            </span>
-            <span className="font-heading text-sm font-semibold text-[#8B7BAD]">
-              Yanlış
-            </span>
-          </motion.div>
-
-          {/* Time */}
-          <motion.div
-            variants={itemVariants}
-            className="flex flex-col items-center gap-1 rounded-3xl bg-white px-4 py-5 shadow-xl"
-            style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}
-          >
-            <span className="text-3xl">⏱️</span>
-            <span className="font-heading text-xl font-bold text-[#4D96FF]">
-              {formatTime(stats.timeSeconds)}
-            </span>
-            <span className="font-heading text-sm font-semibold text-[#8B7BAD]">
-              Süre
-            </span>
-          </motion.div>
-
-          {/* Accuracy */}
-          <motion.div
-            variants={itemVariants}
-            className="flex flex-col items-center gap-1 rounded-3xl bg-white px-4 py-5 shadow-xl"
-            style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}
-          >
-            <span className="text-3xl">🎯</span>
-            <span
-              className="font-heading text-3xl font-bold"
-              style={{ color: progressColor }}
-            >
-              {accuracy}%
-            </span>
-            <span className="font-heading text-sm font-semibold text-[#8B7BAD]">
-              Başarı Oranı
-            </span>
-          </motion.div>
-        </div>
-
-        {/* Progress Bar */}
-        <motion.div
-          variants={itemVariants}
-          className="mb-7 rounded-3xl bg-white px-6 py-5 shadow-xl"
-          style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}
-        >
-          <div className="mb-2 flex items-center justify-between">
-            <span className="font-heading text-sm font-bold text-[#2D1B69]">
-              Başarı Oranı
-            </span>
-            <span
-              className="font-heading text-sm font-bold"
-              style={{ color: progressColor }}
-            >
-              {accuracy}%
-            </span>
-          </div>
-          <div className="h-4 w-full overflow-hidden rounded-full bg-[rgba(45,27,105,0.07)]">
+          {/* Theme Emoji & Celebration Icons */}
+          <div className="relative">
             <motion.div
-              className="h-full rounded-full"
-              style={{ background: progressColor }}
-              initial={{ width: 0 }}
-              animate={{ width: `${accuracy}%` }}
-              transition={{ duration: 0.9, delay: 0.5, ease: "easeOut" }}
-            />
+              className="text-7xl mb-2 filter drop-shadow-md select-none"
+              animate={{ 
+                scale: [1, 1.15, 1],
+                rotate: [0, -10, 10, -5, 5, 0] 
+              }}
+              transition={{ 
+                duration: 1.5,
+                repeat: Infinity,
+                repeatType: "reverse",
+                ease: "easeInOut"
+              }}
+            >
+              {themeEmoji || "🎉"}
+            </motion.div>
+            
+            {/* Tiny floating stars around emoji */}
+            <motion.span 
+              className="absolute -top-2 -left-4 text-xl select-none"
+              animate={{ y: [0, -6, 0], opacity: [0.6, 1, 0.6] }}
+              transition={{ duration: 2, repeat: Infinity, delay: 0.2 }}
+            >
+              ✨
+            </motion.span>
+            <motion.span 
+              className="absolute -bottom-2 -right-4 text-xl select-none"
+              animate={{ y: [0, -8, 0], opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2.3, repeat: Infinity, delay: 0.5 }}
+            >
+              🌟
+            </motion.span>
           </div>
-        </motion.div>
 
-        {/* Action Buttons */}
-        <motion.div
-          variants={itemVariants}
-          className="flex flex-col gap-3 sm:flex-row"
-        >
-          <button
-            type="button"
-            onClick={onReplay}
-            className="btn-candy flex-1 rounded-2xl px-6 py-4 font-heading text-base font-bold text-white"
-          >
-            Tekrar Oyna 🔄
-          </button>
-          <button
-            type="button"
-            onClick={onBack}
-            className="btn-blue flex-1 rounded-2xl px-6 py-4 font-heading text-base font-bold text-white"
-          >
-            Ana Sayfa ↩
-          </button>
-          <button
-            type="button"
-            onClick={handleShare}
-            className="flex-1 rounded-2xl bg-[#8B7BAD] px-6 py-4 font-heading text-base font-bold text-white transition hover:bg-[#7A6B9C]"
-          >
-            Paylaş 📤
-          </button>
+          {/* Encouragement Headline */}
+          <div className="flex flex-col gap-2 z-10">
+            <h1 className="font-heading text-4xl font-extrabold text-[#FF6B9D] leading-tight select-none drop-shadow-sm">
+              Aferin! Harikasın! 🌟
+            </h1>
+            <p className="font-heading text-base font-semibold text-[#8B7BAD] px-2 select-none">
+              &ldquo;{activityTitle}&rdquo; etkinliğini başarıyla tamamladın. Harika bir iş çıkardın!
+            </p>
+          </div>
+
+          {/* Action Buttons inside Card */}
+          <div className="w-full flex flex-col gap-3 mt-4 z-10">
+            <button
+              type="button"
+              onClick={onReplay}
+              className="btn-candy w-full rounded-2xl py-4 font-heading text-lg font-bold text-white shadow-md hover:scale-[1.02] active:scale-[0.98] transition-transform duration-150"
+            >
+              Tekrar Oyna 🔄
+            </button>
+            <button
+              type="button"
+              onClick={onBack}
+              className="btn-blue w-full rounded-2xl py-4 font-heading text-lg font-bold text-white shadow-md hover:scale-[1.02] active:scale-[0.98] transition-transform duration-150"
+            >
+              Geri Dön ↩
+            </button>
+          </div>
         </motion.div>
       </motion.div>
     </div>

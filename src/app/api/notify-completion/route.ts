@@ -16,37 +16,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // 1. Fetch the activity
-    const { data: activity, error: actError } = await supabase
+    // 1. Try to fetch the activity
+    let activityTitle = "Bilinmeyen Etkinlik";
+    let activityType = "Oyun";
+    let therapistEmail = process.env.GMAIL_USER || "";
+    let therapistName = "Değerli Danışman";
+
+    const { data: activity } = await supabase
       .from("activities")
       .select("*")
       .eq("id", activityId)
       .single();
 
-    if (actError || !activity) {
-      // Activity not found — silently succeed (don't break the player experience)
-      console.warn("[notify-completion] Activity not found:", activityId);
-      return NextResponse.json({ ok: true });
+    if (activity) {
+      activityTitle = activity.title;
+      activityType = activity.type;
+
+      // 2. Try to get the therapist (creator) info
+      if (activity.user_id) {
+        try {
+          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
+            activity.user_id
+          );
+          if (!userError && userData?.user?.email) {
+            therapistEmail = userData.user.email;
+            therapistName = userData.user.user_metadata?.full_name || "Değerli Danışman";
+          }
+        } catch (e) {
+          console.warn("[notify-completion] Error fetching user auth record:", e);
+        }
+      }
+    } else {
+      console.warn("[notify-completion] Activity not found in DB, using fallback defaults for sending email:", activityId);
     }
 
-    // 2. Get the therapist (creator) info
-    if (!activity.user_id) {
-      // No creator — skip email
-      console.warn("[notify-completion] Activity has no user_id, skipping email");
-      return NextResponse.json({ ok: true });
+    // Ensure we have a recipient email
+    if (!therapistEmail && process.env.GMAIL_USER) {
+      therapistEmail = process.env.GMAIL_USER;
     }
 
-    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
-      activity.user_id
-    );
-
-    if (userError || !userData?.user?.email) {
-      console.warn("[notify-completion] Could not find therapist email:", activity.user_id);
+    if (!therapistEmail) {
+      console.warn("[notify-completion] No therapist email or fallback available, skipping email");
       return NextResponse.json({ ok: true });
     }
-
-    const therapistEmail = userData.user.email;
-    const therapistName = userData.user.user_metadata?.full_name || "";
 
     // 3. Check if Gmail env vars are configured
     if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {

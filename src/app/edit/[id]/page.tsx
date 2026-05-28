@@ -20,6 +20,20 @@ interface OptionRow {
   isCorrect?: boolean;
 }
 
+interface QuizAnswerRow {
+  id: string;
+  text: string;
+  imageUrl?: string;
+  isCorrect?: boolean;
+}
+
+interface QuizQuestionRow {
+  id: string;
+  question: string;
+  imageUrl?: string;
+  answers: QuizAnswerRow[];
+}
+
 const ACTIVITY_TYPES: { type: ActivityType; emoji: string; label: string }[] = [
   { type: "wheel", emoji: "🎡", label: "Çark" },
   { type: "card", emoji: "🃏", label: "Kart Açma" },
@@ -50,6 +64,8 @@ export default function EditActivityPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [imageSearchTarget, setImageSearchTarget] = useState<{ optionId: string; isPair: boolean } | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Quiz multi-question state
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestionRow[]>([]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -79,17 +95,47 @@ export default function EditActivityPage() {
         setTitle(data.title);
         setCategory(data.category || "");
         setShowFeedback(data.show_feedback ?? true);
-        setOptions(
-          data.options.map((o) => ({
-            id: o.id,
-            text: o.text || "",
-            imageUrl: o.imageUrl,
-            pairText: o.pairText,
-            pairImageUrl: o.pairImageUrl,
-            group: o.group,
-            isCorrect: o.isCorrect,
-          }))
-        );
+        // Quiz: detect new multi-question format vs old single-question format
+        if (data.type === "quiz" && data.options.length > 0 && data.options[0].question && data.options[0].answers) {
+          // New multi-question format
+          setQuizQuestions(
+            data.options.map((o) => ({
+              id: o.id,
+              question: o.question || "",
+              imageUrl: o.imageUrl,
+              answers: (o.answers || []).map((a) => ({
+                id: a.id,
+                text: a.text || "",
+                imageUrl: a.imageUrl,
+                isCorrect: a.isCorrect,
+              })),
+            }))
+          );
+        } else if (data.type === "quiz") {
+          // Old single-question format: convert title -> question, options -> answers
+          setQuizQuestions([{
+            id: uuidv4(),
+            question: data.title,
+            answers: data.options.map((o) => ({
+              id: o.id,
+              text: o.text || "",
+              imageUrl: o.imageUrl,
+              isCorrect: o.isCorrect,
+            })),
+          }]);
+        } else {
+          setOptions(
+            data.options.map((o) => ({
+              id: o.id,
+              text: o.text || "",
+              imageUrl: o.imageUrl,
+              pairText: o.pairText,
+              pairImageUrl: o.pairImageUrl,
+              group: o.group,
+              isCorrect: o.isCorrect,
+            }))
+          );
+        }
         // Extract groups from options for group-sort
         if (data.type === "group-sort") {
           const groupSet = new Set<string>();
@@ -126,7 +172,7 @@ export default function EditActivityPage() {
   }
 
   function toggleCorrect(optId: string) {
-    if (activityType === "quiz" || activityType === "missing-word") {
+    if (activityType === "missing-word") {
       setOptions((prev) => prev.map((o) => ({ ...o, isCorrect: o.id === optId })));
     } else {
       setOptions((prev) => prev.map((o) => (o.id === optId ? { ...o, isCorrect: !o.isCorrect } : o)));
@@ -176,7 +222,16 @@ export default function EditActivityPage() {
       case "group-sort":
         return groups.length >= 2 && groups.every((g) => g.trim()) && options.length >= 2 && options.every((o) => (o.text.trim() || o.imageUrl) && o.group);
       case "quiz":
-        return options.length >= 2 && options.every((o) => o.text.trim() || o.imageUrl) && options.some((o) => o.isCorrect);
+        return (
+          quizQuestions.length >= 1 &&
+          quizQuestions.every(
+            (q) =>
+              q.question.trim().length > 0 &&
+              q.answers.length >= 2 &&
+              q.answers.every((a) => a.text.trim() || a.imageUrl) &&
+              q.answers.some((a) => a.isCorrect)
+          )
+        );
       case "balloon-pop":
         if (displayMode === "read") {
           return options.length >= 2 && options.every((o) => o.text.trim() || o.imageUrl);
@@ -187,20 +242,38 @@ export default function EditActivityPage() {
       default:
         return false;
     }
-  }, [activityType, options, groups, title, displayMode]);
+  }, [activityType, options, groups, title, displayMode, quizQuestions]);
 
   async function handleSave() {
-    const payloadOptions = options
-      .filter((o) => o.text.trim().length > 0 || o.imageUrl)
-      .map((o) => ({
-        id: o.id,
-        ...(o.text.trim() ? { text: o.text.trim() } : {}),
-        ...(o.imageUrl ? { imageUrl: o.imageUrl } : {}),
-        ...(o.pairText?.trim() ? { pairText: o.pairText.trim() } : {}),
-        ...(o.pairImageUrl ? { pairImageUrl: o.pairImageUrl } : {}),
-        ...(o.group ? { group: o.group } : {}),
-        ...(o.isCorrect !== undefined ? { isCorrect: o.isCorrect } : {}),
+    let payloadOptions;
+
+    if (activityType === "quiz") {
+      payloadOptions = quizQuestions.map((q) => ({
+        id: q.id,
+        question: q.question.trim(),
+        ...(q.imageUrl ? { imageUrl: q.imageUrl } : {}),
+        answers: q.answers
+          .filter((a) => a.text.trim() || a.imageUrl)
+          .map((a) => ({
+            id: a.id,
+            ...(a.text.trim() ? { text: a.text.trim() } : {}),
+            ...(a.imageUrl ? { imageUrl: a.imageUrl } : {}),
+            ...(a.isCorrect ? { isCorrect: true } : {}),
+          })),
       }));
+    } else {
+      payloadOptions = options
+        .filter((o) => o.text.trim().length > 0 || o.imageUrl)
+        .map((o) => ({
+          id: o.id,
+          ...(o.text.trim() ? { text: o.text.trim() } : {}),
+          ...(o.imageUrl ? { imageUrl: o.imageUrl } : {}),
+          ...(o.pairText?.trim() ? { pairText: o.pairText.trim() } : {}),
+          ...(o.pairImageUrl ? { pairImageUrl: o.pairImageUrl } : {}),
+          ...(o.group ? { group: o.group } : {}),
+          ...(o.isCorrect !== undefined ? { isCorrect: o.isCorrect } : {}),
+        }));
+    }
 
     if (payloadOptions.length === 0) {
       setSaveError("En az bir geçerli seçenek ekleyin.");
@@ -424,11 +497,13 @@ export default function EditActivityPage() {
           <div className="card-playful p-5">
             <label htmlFor="edit-title" className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
               <span>📝</span>
-              {activityType === "quiz" || (activityType === "balloon-pop" && displayMode !== "read")
-                ? "Soru"
-                : activityType === "missing-word"
-                  ? "Cümle (___ ile boşluk belirtin)"
-                  : "Etkinlik adı"}
+              {activityType === "quiz"
+                ? "Quiz adı"
+                : (activityType === "balloon-pop" && displayMode !== "read")
+                  ? "Soru"
+                  : activityType === "missing-word"
+                    ? "Cümle (___ ile boşluk belirtin)"
+                    : "Etkinlik adı"}
             </label>
             <input
               id="edit-title"
@@ -437,7 +512,7 @@ export default function EditActivityPage() {
               onChange={(e) => setTitle(e.target.value)}
               placeholder={
                 activityType === "quiz"
-                  ? "Örn. Türkiye'nin başkenti neresidir?"
+                  ? "Örn. Coğrafya Quizi"
                   : activityType === "missing-word"
                     ? "Örn. Kedi ___ içer."
                     : "Örn. Haftanın kelimeleri"
@@ -551,12 +626,147 @@ export default function EditActivityPage() {
             </div>
           )}
 
-          {/* Options */}
+          {/* Quiz Multi-Question Editor */}
+          {activityType === "quiz" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <p className="flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
+                  <span>❓</span> Sorular
+                </p>
+                <p className="rounded-full bg-[#FF6B9D]/10 px-3 py-0.5 text-xs font-bold text-[#FF6B9D]">
+                  {quizQuestions.length} soru
+                </p>
+              </div>
+
+              {quizQuestions.map((q, qi) => (
+                <div key={q.id} className="card-playful overflow-hidden">
+                  <div className="flex items-center gap-3 border-b-2 border-[#F5F0FF] bg-gradient-to-r from-[#F8F5FF] to-[#FFF5F8] px-4 py-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] text-sm font-bold text-white shadow-sm">
+                      {qi + 1}
+                    </span>
+                    <span className="flex-1 font-heading text-sm font-bold text-[#2D1B69]">Soru {qi + 1}</span>
+                    {quizQuestions.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setQuizQuestions((prev) => prev.filter((_, i) => i !== qi))}
+                        className="flex h-8 w-8 items-center justify-center rounded-xl text-[#C5B8DB] transition hover:bg-red-50 hover:text-red-500"
+                        aria-label="Soruyu sil"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-3 p-4">
+                    <input
+                      type="text"
+                      value={q.question}
+                      onChange={(e) => setQuizQuestions((prev) => prev.map((item, i) => i === qi ? { ...item, question: e.target.value } : item))}
+                      placeholder="Soruyu yazın... (Örn. Türkiye'nin başkenti neresidir?)"
+                      className="input-playful"
+                    />
+
+                    <div className="space-y-2">
+                      <p className="flex items-center gap-1 px-1 text-xs font-bold text-[#8B7BAD]">
+                        <span>🎯</span> Cevap seçenekleri
+                      </p>
+                      {q.answers.map((ans, ai) => (
+                        <div key={ans.id} className="flex items-center gap-2">
+                          <span
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
+                            style={{ background: themes.find((t) => t.id === selectedThemeId)?.cardColors[ai % 7] || "#6366f1" }}
+                          >
+                            {String.fromCharCode(65 + ai)}
+                          </span>
+                          <input
+                            type="text"
+                            value={ans.text}
+                            onChange={(e) => {
+                              setQuizQuestions((prev) => prev.map((item, i) => {
+                                if (i !== qi) return item;
+                                return { ...item, answers: item.answers.map((a, j) => j === ai ? { ...a, text: e.target.value } : a) };
+                              }));
+                            }}
+                            placeholder={`Seçenek ${String.fromCharCode(65 + ai)}`}
+                            className="input-playful flex-1"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuizQuestions((prev) => prev.map((item, i) => {
+                                if (i !== qi) return item;
+                                return { ...item, answers: item.answers.map((a, j) => ({ ...a, isCorrect: j === ai })) };
+                              }));
+                            }}
+                            className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-bold transition ${
+                              ans.isCorrect
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-[#F8F5FF] text-[#8B7BAD] hover:bg-emerald-50 hover:text-emerald-600"
+                            }`}
+                          >
+                            {ans.isCorrect ? "✅" : "Doğru?"}
+                          </button>
+                          {q.answers.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setQuizQuestions((prev) => prev.map((item, i) => {
+                                  if (i !== qi) return item;
+                                  return { ...item, answers: item.answers.filter((_, j) => j !== ai) };
+                                }));
+                              }}
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#C5B8DB] transition hover:bg-red-50 hover:text-red-500"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuizQuestions((prev) => prev.map((item, i) => {
+                            if (i !== qi) return item;
+                            return { ...item, answers: [...item.answers, { id: uuidv4(), text: "", isCorrect: false }] };
+                          }));
+                        }}
+                        className="ml-9 text-xs font-bold text-[#8B7BAD] transition hover:text-[#FF6B9D]"
+                      >
+                        + Seçenek ekle
+                      </button>
+                    </div>
+
+                    {q.question.trim().length > 0 && !q.answers.some((a) => a.isCorrect) && (
+                      <p className="flex items-center gap-1 text-xs font-semibold text-amber-500">
+                        <span>⚠️</span> Bu soru için doğru cevabı işaretleyin
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => setQuizQuestions((prev) => [...prev, { id: uuidv4(), question: "", answers: [{ id: uuidv4(), text: "", isCorrect: false }, { id: uuidv4(), text: "", isCorrect: false }] }])}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#6366f1]/30 bg-[#eef2ff]/50 py-4 text-sm font-bold text-[#6366f1] transition hover:border-[#6366f1] hover:bg-[#eef2ff] hover:text-[#4f46e5]"
+              >
+                <span className="text-lg">+</span>
+                Yeni soru ekle
+              </button>
+            </div>
+          )}
+
+          {/* Options — for non-quiz types */}
+          {activityType !== "quiz" && (
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
               <p className="flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
                 <span>🎯</span>
-                {activityType === "match" ? "Çiftler" : activityType === "quiz" || activityType === "balloon-pop" ? "Cevaplar" : activityType === "missing-word" ? "Kelime seçenekleri" : "Seçenekler"}
+                {activityType === "match" ? "Çiftler" : activityType === "balloon-pop" ? "Cevaplar" : activityType === "missing-word" ? "Kelime seçenekleri" : "Seçenekler"}
               </p>
               <p className="rounded-full bg-[#FF6B9D]/10 px-3 py-0.5 text-xs font-bold text-[#FF6B9D]">
                 {options.filter((o) => o.text.trim() || o.imageUrl).length} eklendi
@@ -569,7 +779,7 @@ export default function EditActivityPage() {
                     {idx + 1}
                   </span>
                   <div className="flex items-center gap-2">
-                    {(activityType === "quiz" || activityType === "missing-word" || (activityType === "balloon-pop" && displayMode !== "read")) && (
+                    {(activityType === "missing-word" || (activityType === "balloon-pop" && displayMode !== "read")) && (
                       <button
                         type="button"
                         onClick={() => toggleCorrect(opt.id)}
@@ -727,6 +937,7 @@ export default function EditActivityPage() {
               {activityType === "match" ? "Çift ekle" : "Seçenek ekle"}
             </button>
           </div>
+          )}
 
           {saveError && (
             <div className="rounded-2xl border-2 border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-bold text-red-600">

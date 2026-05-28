@@ -24,6 +24,20 @@ interface OptionRow {
   isCorrect?: boolean;
 }
 
+interface QuizAnswerRow {
+  id: string;
+  text: string;
+  imageUrl?: string;
+  isCorrect?: boolean;
+}
+
+interface QuizQuestionRow {
+  id: string;
+  question: string;
+  imageUrl?: string;
+  answers: QuizAnswerRow[];
+}
+
 const ACTIVITY_TYPES: { type: ActivityType; emoji: string; label: string; desc: string }[] = [
   { type: "wheel", emoji: "🎡", label: "Çark", desc: "Rastgele seçim çarkı" },
   { type: "card", emoji: "🃏", label: "Kart Açma", desc: "Kartları çevirerek keşfet" },
@@ -81,6 +95,10 @@ export default function CreateActivityPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [imageSearchTarget, setImageSearchTarget] = useState<{ optionId: string; isPair: boolean } | null>(null);
   const [showWordBank, setShowWordBank] = useState(false);
+  // Quiz multi-question state
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestionRow[]>([
+    { id: uuidv4(), question: "", answers: [{ id: uuidv4(), text: "", isCorrect: false }, { id: uuidv4(), text: "", isCorrect: false }] },
+  ]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -115,6 +133,9 @@ export default function CreateActivityPage() {
     if (type !== activityType) {
       setOptions([{ id: uuidv4(), text: "" }]);
       setTitle("");
+      setQuizQuestions([
+        { id: uuidv4(), question: "", answers: [{ id: uuidv4(), text: "", isCorrect: false }, { id: uuidv4(), text: "", isCorrect: false }] },
+      ]);
     }
   }
 
@@ -154,9 +175,14 @@ export default function CreateActivityPage() {
 
       case "quiz":
         return (
-          options.length >= 2 &&
-          options.every((o) => o.text.trim() || o.imageUrl) &&
-          options.some((o) => o.isCorrect)
+          quizQuestions.length >= 1 &&
+          quizQuestions.every(
+            (q) =>
+              q.question.trim().length > 0 &&
+              q.answers.length >= 2 &&
+              q.answers.every((a) => a.text.trim() || a.imageUrl) &&
+              q.answers.some((a) => a.isCorrect)
+          )
         );
 
       case "balloon-pop":
@@ -275,17 +301,36 @@ export default function CreateActivityPage() {
     if (activityType === "card" && !displayMode) return;
     if (activityType === "balloon-pop" && !displayMode) return;
 
-    const payloadOptions = options
-      .filter((o) => o.text.trim().length > 0 || o.imageUrl)
-      .map((o) => ({
-        id: o.id,
-        ...(o.text.trim() ? { text: o.text.trim() } : {}),
-        ...(o.imageUrl ? { imageUrl: o.imageUrl } : {}),
-        ...(o.pairText?.trim() ? { pairText: o.pairText.trim() } : {}),
-        ...(o.pairImageUrl ? { pairImageUrl: o.pairImageUrl } : {}),
-        ...(o.group ? { group: o.group } : {}),
-        ...(o.isCorrect !== undefined ? { isCorrect: o.isCorrect } : {}),
+    let payloadOptions;
+
+    if (activityType === "quiz") {
+      // Quiz multi-question format
+      payloadOptions = quizQuestions.map((q) => ({
+        id: q.id,
+        question: q.question.trim(),
+        ...(q.imageUrl ? { imageUrl: q.imageUrl } : {}),
+        answers: q.answers
+          .filter((a) => a.text.trim() || a.imageUrl)
+          .map((a) => ({
+            id: a.id,
+            ...(a.text.trim() ? { text: a.text.trim() } : {}),
+            ...(a.imageUrl ? { imageUrl: a.imageUrl } : {}),
+            ...(a.isCorrect ? { isCorrect: true } : {}),
+          })),
       }));
+    } else {
+      payloadOptions = options
+        .filter((o) => o.text.trim().length > 0 || o.imageUrl)
+        .map((o) => ({
+          id: o.id,
+          ...(o.text.trim() ? { text: o.text.trim() } : {}),
+          ...(o.imageUrl ? { imageUrl: o.imageUrl } : {}),
+          ...(o.pairText?.trim() ? { pairText: o.pairText.trim() } : {}),
+          ...(o.pairImageUrl ? { pairImageUrl: o.pairImageUrl } : {}),
+          ...(o.group ? { group: o.group } : {}),
+          ...(o.isCorrect !== undefined ? { isCorrect: o.isCorrect } : {}),
+        }));
+    }
 
     if (payloadOptions.length === 0) {
       setSaveError("En az bir geçerli seçenek ekleyin.");
@@ -593,16 +638,18 @@ export default function CreateActivityPage() {
                 </p>
               </div>
 
-              {/* Title Input */}
+              {/* Title Input — quiz uses this as quiz name, not question */}
               {!(activityType === "balloon-pop" && displayMode === "read") && (
               <div className="card-playful p-5">
                 <label htmlFor="activity-title" className="mb-2 flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
                   <span>📝</span>
-                  {activityType === "quiz" || activityType === "balloon-pop"
-                    ? "Soru"
-                    : activityType === "missing-word"
-                      ? "Cümle (___ ile boşluk belirtin)"
-                      : "Etkinlik adı"}
+                  {activityType === "quiz"
+                    ? "Quiz adı"
+                    : activityType === "balloon-pop"
+                      ? "Soru"
+                      : activityType === "missing-word"
+                        ? "Cümle (___ ile boşluk belirtin)"
+                        : "Etkinlik adı"}
                 </label>
                 <input
                   id="activity-title"
@@ -611,7 +658,7 @@ export default function CreateActivityPage() {
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={
                     activityType === "quiz"
-                      ? "Örn. Türkiye'nin başkenti neresidir?"
+                      ? "Örn. Coğrafya Quizi"
                       : activityType === "missing-word"
                         ? "Örn. Kedi ___ içer."
                         : activityType === "balloon-pop"
@@ -754,12 +801,153 @@ export default function CreateActivityPage() {
                 </button>
               )}
 
-              {/* Options List */}
+              {/* Quiz Multi-Question Editor */}
+              {activityType === "quiz" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-1">
+                    <p className="flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
+                      <span>❓</span> Sorular
+                    </p>
+                    <p className="rounded-full bg-[#FF6B9D]/10 px-3 py-0.5 text-xs font-bold text-[#FF6B9D]">
+                      {quizQuestions.length} soru
+                    </p>
+                  </div>
+
+                  {quizQuestions.map((q, qi) => (
+                    <div key={q.id} className="card-playful overflow-hidden">
+                      {/* Question Header */}
+                      <div className="flex items-center gap-3 border-b-2 border-[#F5F0FF] bg-gradient-to-r from-[#F8F5FF] to-[#FFF5F8] px-4 py-3">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] text-sm font-bold text-white shadow-sm">
+                          {qi + 1}
+                        </span>
+                        <span className="flex-1 font-heading text-sm font-bold text-[#2D1B69]">Soru {qi + 1}</span>
+                        {quizQuestions.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setQuizQuestions((prev) => prev.filter((_, i) => i !== qi))}
+                            className="flex h-8 w-8 items-center justify-center rounded-xl text-[#C5B8DB] transition hover:bg-red-50 hover:text-red-500"
+                            aria-label="Soruyu sil"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="space-y-3 p-4">
+                        {/* Question Text */}
+                        <input
+                          type="text"
+                          value={q.question}
+                          onChange={(e) => setQuizQuestions((prev) => prev.map((item, i) => i === qi ? { ...item, question: e.target.value } : item))}
+                          placeholder="Soruyu yazın... (Örn. Türkiye'nin başkenti neresidir?)"
+                          className="input-playful"
+                        />
+
+                        {/* Answers */}
+                        <div className="space-y-2">
+                          <p className="flex items-center gap-1 px-1 text-xs font-bold text-[#8B7BAD]">
+                            <span>🎯</span> Cevap seçenekleri
+                          </p>
+                          {q.answers.map((ans, ai) => (
+                            <div key={ans.id} className="flex items-center gap-2">
+                              <span
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
+                                style={{ background: themes.find((t) => t.id === selectedThemeId)?.cardColors[ai % 7] || "#6366f1" }}
+                              >
+                                {String.fromCharCode(65 + ai)}
+                              </span>
+                              <input
+                                type="text"
+                                value={ans.text}
+                                onChange={(e) => {
+                                  setQuizQuestions((prev) => prev.map((item, i) => {
+                                    if (i !== qi) return item;
+                                    return { ...item, answers: item.answers.map((a, j) => j === ai ? { ...a, text: e.target.value } : a) };
+                                  }));
+                                }}
+                                placeholder={`Seçenek ${String.fromCharCode(65 + ai)}`}
+                                className="input-playful flex-1"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setQuizQuestions((prev) => prev.map((item, i) => {
+                                    if (i !== qi) return item;
+                                    return { ...item, answers: item.answers.map((a, j) => ({ ...a, isCorrect: j === ai })) };
+                                  }));
+                                }}
+                                className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-bold transition ${
+                                  ans.isCorrect
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-[#F8F5FF] text-[#8B7BAD] hover:bg-emerald-50 hover:text-emerald-600"
+                                }`}
+                              >
+                                {ans.isCorrect ? "✅" : "Doğru?"}
+                              </button>
+                              {q.answers.length > 2 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setQuizQuestions((prev) => prev.map((item, i) => {
+                                      if (i !== qi) return item;
+                                      return { ...item, answers: item.answers.filter((_, j) => j !== ai) };
+                                    }));
+                                  }}
+                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#C5B8DB] transition hover:bg-red-50 hover:text-red-500"
+                                >
+                                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuizQuestions((prev) => prev.map((item, i) => {
+                                if (i !== qi) return item;
+                                return { ...item, answers: [...item.answers, { id: uuidv4(), text: "", isCorrect: false }] };
+                              }));
+                            }}
+                            className="ml-9 text-xs font-bold text-[#8B7BAD] transition hover:text-[#FF6B9D]"
+                          >
+                            + Seçenek ekle
+                          </button>
+                        </div>
+
+                        {/* Per-question validation */}
+                        {q.question.trim().length > 0 && !q.answers.some((a) => a.isCorrect) && (
+                          <p className="flex items-center gap-1 text-xs font-semibold text-amber-500">
+                            <span>⚠️</span> Bu soru için doğru cevabı işaretleyin
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add Question Button */}
+                  <button
+                    type="button"
+                    onClick={() => setQuizQuestions((prev) => [...prev, { id: uuidv4(), question: "", answers: [{ id: uuidv4(), text: "", isCorrect: false }, { id: uuidv4(), text: "", isCorrect: false }] }])}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#6366f1]/30 bg-[#eef2ff]/50 py-4 text-sm font-bold text-[#6366f1] transition hover:border-[#6366f1] hover:bg-[#eef2ff] hover:text-[#4f46e5]"
+                  >
+                    <span className="text-lg">+</span>
+                    Yeni soru ekle
+                  </button>
+                </div>
+              )}
+
+              {/* Options List — for non-quiz types */}
+              {activityType !== "quiz" && (
+              <>
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
                   <p className="flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
                     <span>🎯</span>
-                    {activityType === "match" ? "Çiftler" : activityType === "quiz" || activityType === "balloon-pop" ? "Cevaplar" : activityType === "missing-word" ? "Kelime seçenekleri" : "Seçenekler"}
+                    {activityType === "match" ? "Çiftler" : activityType === "balloon-pop" ? "Cevaplar" : activityType === "missing-word" ? "Kelime seçenekleri" : "Seçenekler"}
                   </p>
                   <p className="rounded-full bg-[#FF6B9D]/10 px-3 py-0.5 text-xs font-bold text-[#FF6B9D]">
                     {options.filter((o) => o.text.trim() || o.imageUrl).length} eklendi
@@ -773,8 +961,8 @@ export default function CreateActivityPage() {
                         {idx + 1}
                       </span>
                       <div className="flex items-center gap-2">
-                        {/* Correct toggle for quiz/missing-word/balloon-pop */}
-                        {(activityType === "quiz" || activityType === "missing-word" || (activityType === "balloon-pop" && displayMode !== "read")) && (
+                        {/* Correct toggle for missing-word/balloon-pop */}
+                        {(activityType === "missing-word" || (activityType === "balloon-pop" && displayMode !== "read")) && (
                           <button
                             type="button"
                             onClick={() => toggleCorrect(opt.id)}
@@ -951,12 +1139,23 @@ export default function CreateActivityPage() {
                 <span className="text-lg">+</span>
                 {activityType === "match" ? "Çift ekle" : "Seçenek ekle"}
               </button>
+              </>
+              )}
 
               {/* Validation messages */}
-              {!contentValid && options.length > 0 && (
+              {!contentValid && activityType === "quiz" && quizQuestions.length > 0 && (
                 <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 px-4 py-3 text-center text-xs font-bold text-amber-600">
                   ⚠️{" "}
-                  {(activityType === "quiz" || activityType === "missing-word" || (activityType === "balloon-pop" && displayMode !== "read")) &&
+                  {quizQuestions.some((q) => !q.question.trim()) && "Her sorunun metni olmalı. "}
+                  {quizQuestions.some((q) => q.answers.length < 2) && "Her soruda en az 2 cevap seçeneği olmalı. "}
+                  {quizQuestions.some((q) => !q.answers.some((a) => a.isCorrect)) && "Her soruda bir doğru cevap işaretleyin. "}
+                  {quizQuestions.some((q) => q.answers.some((a) => !a.text.trim() && !a.imageUrl)) && "Tüm cevaplarda yazı veya görsel olmalı."}
+                </div>
+              )}
+              {!contentValid && activityType !== "quiz" && options.length > 0 && (
+                <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 px-4 py-3 text-center text-xs font-bold text-amber-600">
+                  ⚠️{" "}
+                  {(activityType === "missing-word" || (activityType === "balloon-pop" && displayMode !== "read")) &&
                     !options.some((o) => o.isCorrect) &&
                     "En az bir doğru cevap işaretleyin. "}
                   {activityType === "missing-word" && !title.includes("___") &&
@@ -997,7 +1196,7 @@ export default function CreateActivityPage() {
                 <div className="divide-y-3 divide-[#F5F0FF]">
                   {!(activityType === "balloon-pop" && displayMode === "read") && (
                   <div className="flex items-center justify-between px-5 py-4">
-                    <span className="text-sm font-semibold text-[#8B7BAD]">📝 {activityType === "quiz" || activityType === "balloon-pop" ? "Soru" : activityType === "missing-word" ? "Cümle" : "Etkinlik adı"}</span>
+                    <span className="text-sm font-semibold text-[#8B7BAD]">📝 {activityType === "quiz" ? "Quiz adı" : activityType === "balloon-pop" ? "Soru" : activityType === "missing-word" ? "Cümle" : "Etkinlik adı"}</span>
                     <span className="font-heading text-sm font-bold text-[#2D1B69]">
                       {title.trim() || "Adsız etkinlik"}
                     </span>
@@ -1026,30 +1225,49 @@ export default function CreateActivityPage() {
                     </span>
                   </div>
                   <div className="px-5 py-4">
-                    <span className="text-sm font-semibold text-[#8B7BAD]">
-                      🎯 {activityType === "match" ? "Çiftler" : "Seçenekler"} ({options.filter((o) => o.text.trim() || o.imageUrl).length})
-                    </span>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {options
-                        .filter((o) => o.text.trim() || o.imageUrl)
-                        .map((o) => (
-                          <span
-                            key={o.id}
-                            className="inline-flex items-center rounded-xl bg-gradient-to-r from-[#FFF5F8] to-[#F8F5FF] px-3 py-1.5 text-xs font-bold text-[#2D1B69]"
-                            style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}
-                          >
-                            {o.isCorrect && <span className="mr-1 text-emerald-500">✅</span>}
-                            {o.text.trim() || "Görsel"}
-                            {o.imageUrl && <span className="ml-1 text-[#8B7BAD]">📷</span>}
-                            {activityType === "match" && o.pairText && (
-                              <span className="ml-1 text-[#8B7BAD]">→ {o.pairText}</span>
-                            )}
-                            {activityType === "group-sort" && o.group && (
-                              <span className="ml-1 text-[#8B7BAD]">[{o.group}]</span>
-                            )}
-                          </span>
-                        ))}
-                    </div>
+                    {activityType === "quiz" ? (
+                      <>
+                        <span className="text-sm font-semibold text-[#8B7BAD]">
+                          ❓ Sorular ({quizQuestions.length})
+                        </span>
+                        <div className="mt-3 space-y-2">
+                          {quizQuestions.map((q, qi) => (
+                            <div key={q.id} className="rounded-xl bg-gradient-to-r from-[#FFF5F8] to-[#F8F5FF] px-3 py-2 text-xs font-bold text-[#2D1B69]" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
+                              <span className="mr-2 text-[#6366f1]">{qi + 1}.</span>
+                              {q.question.trim() || "Boş soru"}
+                              <span className="ml-2 text-[#8B7BAD]">({q.answers.filter((a) => a.text.trim()).length} seçenek)</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm font-semibold text-[#8B7BAD]">
+                          🎯 {activityType === "match" ? "Çiftler" : "Seçenekler"} ({options.filter((o) => o.text.trim() || o.imageUrl).length})
+                        </span>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {options
+                            .filter((o) => o.text.trim() || o.imageUrl)
+                            .map((o) => (
+                              <span
+                                key={o.id}
+                                className="inline-flex items-center rounded-xl bg-gradient-to-r from-[#FFF5F8] to-[#F8F5FF] px-3 py-1.5 text-xs font-bold text-[#2D1B69]"
+                                style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}
+                              >
+                                {o.isCorrect && <span className="mr-1 text-emerald-500">✅</span>}
+                                {o.text.trim() || "Görsel"}
+                                {o.imageUrl && <span className="ml-1 text-[#8B7BAD]">📷</span>}
+                                {activityType === "match" && o.pairText && (
+                                  <span className="ml-1 text-[#8B7BAD]">→ {o.pairText}</span>
+                                )}
+                                {activityType === "group-sort" && o.group && (
+                                  <span className="ml-1 text-[#8B7BAD]">[{o.group}]</span>
+                                )}
+                              </span>
+                            ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

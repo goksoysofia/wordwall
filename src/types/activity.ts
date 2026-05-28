@@ -23,6 +23,23 @@ export interface ActivityOption {
   group?: string;
   // quiz, missing-word, balloon-pop: correct answer marker
   isCorrect?: boolean;
+  // quiz (multi-question): nested question data
+  question?: string;
+  answers?: QuizAnswer[];
+}
+
+export interface QuizAnswer {
+  id: string;
+  text?: string;
+  imageUrl?: string;
+  isCorrect?: boolean;
+}
+
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  imageUrl?: string;
+  answers: QuizAnswer[];
 }
 
 export interface Activity {

@@ -3,13 +3,31 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import SWRegister from "./sw-register";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://wordwall.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   applicationName: "Wordwall",
   title: {
     default: "Wordwall — Etkinlik Oluşturucu",
     template: "%s · Wordwall",
   },
   description: "Dil ve konuşma terapisi etkinlikleri oluştur, oyna ve paylaş.",
+  keywords: ["dil terapisi", "konuşma terapisi", "eğitsel oyun", "etkinlik oluşturucu", "DKT"],
+  openGraph: {
+    type: "website",
+    siteName: "Wordwall",
+    title: "Wordwall — Etkinlik Oluşturucu",
+    description: "Dil ve konuşma terapisi etkinlikleri oluştur, oyna ve paylaş.",
+    locale: "tr_TR",
+    url: siteUrl,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Wordwall — Etkinlik Oluşturucu",
+    description: "Dil ve konuşma terapisi etkinlikleri oluştur, oyna ve paylaş.",
+  },
+  robots: { index: true, follow: true },
   appleWebApp: {
     capable: true,
     title: "Wordwall",

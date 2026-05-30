@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { authFetch } from "@/lib/auth-fetch";
 import ImageSearchModal from "@/components/ImageSearchModal";
 import WordBankModal from "@/components/WordBankModal";
+import PageLoader from "@/components/PageLoader";
 import type { WordEntry } from "@/lib/wordBank";
 import type { ActivityType, CreateActivityPayload } from "@/types/activity";
 
@@ -105,6 +106,7 @@ export default function CreateActivityPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [imageSearchTarget, setImageSearchTarget] = useState<{ optionId: string; isPair: boolean } | null>(null);
   const [showWordBank, setShowWordBank] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   // Quiz multi-question state
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestionRow[]>([
     { id: uuidv4(), question: "", answers: [{ id: uuidv4(), text: "", isCorrect: false }, { id: uuidv4(), text: "", isCorrect: false }] },
@@ -331,7 +333,7 @@ export default function CreateActivityPage() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const res = await authFetch("/api/upload", { method: "POST", body: fd });
       const contentType = res.headers.get("content-type") ?? "";
       if (!contentType.includes("application/json")) {
         const text = await res.text();
@@ -347,7 +349,7 @@ export default function CreateActivityPage() {
         updateOption(optionId, { imageUrl: data.url });
       }
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Görsel yüklenirken bir hata oluştu.");
+      setUploadError(e instanceof Error ? e.message : "Görsel yüklenirken bir hata oluştu.");
     } finally {
       setUploadingIds((s) => {
         const next = new Set(s);
@@ -432,8 +434,31 @@ export default function CreateActivityPage() {
   // Helper: get type label info
   const typeInfo = ACTIVITY_TYPES.find((t) => t.type === activityType);
 
+  // Auth gate — avoid flashing the wizard before the redirect to /login fires.
+  if (authLoading) return <PageLoader />;
+  if (!user) return null;
+
   return (
     <div className="relative min-h-screen overflow-hidden">
+      {/* Upload error toast */}
+      {uploadError && (
+        <div className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
+          <div className="flex max-w-md items-start gap-3 rounded-2xl border-2 border-red-200 bg-white px-4 py-3 shadow-xl">
+            <span className="text-lg">⚠️</span>
+            <p className="flex-1 text-sm font-semibold text-red-600">{uploadError}</p>
+            <button
+              type="button"
+              onClick={() => setUploadError(null)}
+              className="text-red-400 transition hover:text-red-600"
+              aria-label="Kapat"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
       {/* Background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-gradient-to-br from-[#FFF8F0] via-[#FFF3E4] to-[#E8F4FD]" />

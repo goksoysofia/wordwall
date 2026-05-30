@@ -1,25 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import {
+  supabaseAdmin,
+  getUserFromRequest,
+  parseJsonBody,
+  jsonError,
+  serverError,
+} from "@/lib/api-server";
+import { validateTemplateInput } from "@/lib/validation";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+/** Strip characters that have special meaning in PostgREST filter strings. */
+function sanitizeSearch(raw: string): string {
+  return raw.replace(/[,(){}*\\%]/g, " ").trim().slice(0, 60);
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category");
-  const search = searchParams.get("search");
+  const rawSearch = searchParams.get("search");
+  const search = rawSearch ? sanitizeSearch(rawSearch) : null;
   const sort = searchParams.get("sort") || "popular";
   const excludeUser = searchParams.get("exclude_user");
 
   // Fetch community templates
-  let tplQuery = supabase.from("templates").select("*").eq("source", "community");
+  let tplQuery = supabaseAdmin.from("templates").select("*").eq("source", "community");
   if (category) tplQuery = tplQuery.eq("category", category);
   if (search) tplQuery = tplQuery.or(`title.ilike.%${search}%,tags.cs.{${search}}`);
 
   // Fetch all user activities (exclude current user's own)
-  let actQuery = supabase.from("activities").select("*").not("user_id", "is", null);
+  let actQuery = supabaseAdmin.from("activities").select("*").not("user_id", "is", null);
   if (excludeUser) actQuery = actQuery.neq("user_id", excludeUser);
   if (category) actQuery = actQuery.eq("category", category);
   if (search) actQuery = actQuery.ilike("title", `%${search}%`);
@@ -27,7 +35,7 @@ export async function GET(request: NextRequest) {
   const [tplResult, actResult] = await Promise.all([tplQuery, actQuery]);
 
   if (tplResult.error) {
-    return NextResponse.json({ error: tplResult.error.message }, { status: 500 });
+    return serverError("templates.GET", tplResult.error);
   }
 
   const templates = tplResult.data || [];
@@ -41,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     await Promise.all(
       userIds.map(async (uid) => {
-        const { data } = await supabase.auth.admin.getUserById(uid);
+        const { data } = await supabaseAdmin.auth.admin.getUserById(uid);
         if (data?.user) {
           userNameMap[uid] =
             (data.user.user_metadata?.full_name as string) ||
@@ -86,53 +94,39 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(merged);
 }
 
-async function getUserFromRequest(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) return null;
-
-  const token = authHeader.slice(7);
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) return null;
-  return user;
-}
-
 export async function POST(request: NextRequest) {
   const user = await getUserFromRequest(request);
   if (!user) {
-    return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+    return jsonError("Giriş yapmanız gerekiyor.", 401);
   }
 
-  const body = await request.json();
-
-  const { title, description, type, display_mode, theme, options, category, tags, author_name } = body;
-
-  if (!title || !type || !theme || !options || !category) {
-    return NextResponse.json(
-      { error: "title, type, theme, options ve category zorunludur." },
-      { status: 400 }
-    );
+  const body = await parseJsonBody(request);
+  const validation = validateTemplateInput(body);
+  if (!validation.ok) {
+    return jsonError(validation.error, 400);
   }
+  const v = validation.value;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("templates")
     .insert({
-      title,
-      description: description || null,
-      type,
-      display_mode: display_mode || null,
-      theme,
-      options,
-      category,
-      tags: tags || [],
+      title: v.title,
+      description: v.description,
+      type: v.type,
+      display_mode: v.display_mode,
+      theme: v.theme,
+      options: v.options,
+      category: v.category,
+      tags: v.tags,
       source: "community",
-      author_name: author_name || null,
+      author_name: v.author_name,
       user_id: user.id,
     })
     .select()
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return serverError("templates.POST", error);
   }
 
   return NextResponse.json(data);

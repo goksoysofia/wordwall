@@ -1,20 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-async function getUserFromRequest(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) return null;
-
-  const token = authHeader.slice(7);
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) return null;
-  return user;
-}
+import { supabaseAdmin, getUserFromRequest, jsonError, serverError } from "@/lib/api-server";
 
 export async function POST(
   request: NextRequest,
@@ -23,7 +8,7 @@ export async function POST(
   const { id } = await params;
   const user = await getUserFromRequest(request);
   if (!user) {
-    return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+    return jsonError("Giriş yapmanız gerekiyor.", 401);
   }
 
   // Handle activity-based templates (id starts with "activity:")
@@ -37,14 +22,14 @@ export async function POST(
   let sourceOptions: unknown;
 
   if (isActivity) {
-    const { data: act, error: fetchError } = await supabase
+    const { data: act, error: fetchError } = await supabaseAdmin
       .from("activities")
       .select("*")
       .eq("id", realId)
       .single();
 
     if (fetchError || !act) {
-      return NextResponse.json({ error: "Etkinlik bulunamadı." }, { status: 404 });
+      return jsonError("Etkinlik bulunamadı.", 404);
     }
 
     sourceTitle = act.title;
@@ -53,14 +38,14 @@ export async function POST(
     sourceTheme = act.theme;
     sourceOptions = act.options;
   } else {
-    const { data: template, error: fetchError } = await supabase
+    const { data: template, error: fetchError } = await supabaseAdmin
       .from("templates")
       .select("*")
       .eq("id", realId)
       .single();
 
     if (fetchError || !template) {
-      return NextResponse.json({ error: "Şablon bulunamadı." }, { status: 404 });
+      return jsonError("Şablon bulunamadı.", 404);
     }
 
     sourceTitle = template.title;
@@ -70,13 +55,13 @@ export async function POST(
     sourceOptions = template.options;
 
     // Increment use_count for real templates
-    await supabase
+    await supabaseAdmin
       .from("templates")
       .update({ use_count: (template.use_count || 0) + 1 })
       .eq("id", realId);
   }
 
-  const { data: activity, error: insertError } = await supabase
+  const { data: activity, error: insertError } = await supabaseAdmin
     .from("activities")
     .insert({
       title: `${sourceTitle} (kopya)`,
@@ -90,7 +75,7 @@ export async function POST(
     .single();
 
   if (insertError || !activity) {
-    return NextResponse.json({ error: insertError?.message || "Etkinlik oluşturulamadı." }, { status: 500 });
+    return serverError("templates.use", insertError);
   }
 
   return NextResponse.json({ id: activity.id });

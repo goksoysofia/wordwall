@@ -11,7 +11,13 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
   if (session?.access_token) {
     headers.set("Authorization", `Bearer ${session.access_token}`);
   }
-  if (!headers.has("Content-Type") && options.body) {
+  // Only default to JSON for non-FormData bodies — FormData must keep the
+  // browser-generated multipart boundary Content-Type.
+  if (
+    !headers.has("Content-Type") &&
+    options.body &&
+    !(options.body instanceof FormData)
+  ) {
     headers.set("Content-Type", "application/json");
   }
 

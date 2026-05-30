@@ -42,6 +42,10 @@ next-env.d.ts
 # test/agent artifacts
 .playwright-mcp/
 .superpowers/
+.claude/
+/*.png
+test-*.png
+/supabase/.temp/
 
 # Capacitor
 ios/App/Pods

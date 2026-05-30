@@ -1,37 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-// Extract user from Authorization header
-async function getUserFromRequest(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) return null;
-
-  const token = authHeader.slice(7);
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !user) return null;
-  return user;
-}
+import {
+  supabaseAdmin,
+  getUserFromRequest,
+  parseJsonBody,
+  jsonError,
+  serverError,
+} from "@/lib/api-server";
+import { validateActivityInput } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
   const user = await getUserFromRequest(request);
 
-  // If authenticated, return user's activities
-  // If not, return all activities
-  let query = supabaseAdmin.from("activities").select("*");
-
-  if (user) {
-    query = query.eq("user_id", user.id);
+  // Authenticated → only the user's own activities.
+  // Unauthenticated → no listing (activities are fetched individually by id on the play page).
+  if (!user) {
+    return NextResponse.json([]);
   }
 
-  const { data, error } = await query.order("created_at", { ascending: false });
+  const { data, error } = await supabaseAdmin
+    .from("activities")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return serverError("activities.GET", error);
   }
 
   return NextResponse.json(data);
@@ -40,28 +33,33 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const user = await getUserFromRequest(request);
   if (!user) {
-    return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+    return jsonError("Giriş yapmanız gerekiyor.", 401);
   }
 
-  const body = await request.json();
+  const body = await parseJsonBody(request);
+  const validation = validateActivityInput(body);
+  if (!validation.ok) {
+    return jsonError(validation.error, 400);
+  }
+  const v = validation.value;
 
   const { data, error } = await supabaseAdmin
     .from("activities")
     .insert({
-      title: body.title,
-      type: body.type,
-      display_mode: body.display_mode,
-      theme: body.theme,
-      category: body.category || null,
-      show_feedback: body.show_feedback ?? true,
-      options: body.options,
+      title: v.title,
+      type: v.type,
+      display_mode: v.display_mode,
+      theme: v.theme,
+      category: v.category,
+      show_feedback: v.show_feedback,
+      options: v.options,
       user_id: user.id,
     })
     .select()
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return serverError("activities.POST", error);
   }
 
   return NextResponse.json(data);

@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { authFetch } from "@/lib/auth-fetch";
 import ShareTemplateModal from "@/components/ShareTemplateModal";
 import WordBankCreateModal from "@/components/WordBankCreateModal";
+import PageLoader from "@/components/PageLoader";
 
 function typeLabel(type: Activity["type"]): { icon: string; label: string } {
   switch (type) {
@@ -140,8 +141,8 @@ export default function HomePage() {
           display_mode: activity.display_mode,
           theme: activity.theme,
           category: category,
+          show_feedback: activity.show_feedback,
           options: activity.options,
-
         }),
       });
       if (res.ok) {
@@ -178,8 +179,8 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    void loadActivities();
-  }, [loadActivities]);
+    if (user) void loadActivities();
+  }, [user, loadActivities]);
 
   const copyPlayLink = async (id: string) => {
     const url = `${window.location.origin}/play/${id}`;
@@ -248,6 +249,10 @@ export default function HomePage() {
       setDuplicatingId(null);
     }
   };
+
+  // Auth gate — avoid flashing the dashboard before the redirect to /login fires.
+  if (authLoading) return <PageLoader />;
+  if (!user) return null;
 
   return (
     <div className="relative min-h-screen overflow-hidden">

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { authFetch } from "@/lib/auth-fetch";
 
 interface PexelsPhoto {
   id: number;
@@ -38,7 +39,7 @@ export default function ImageSearchModal({ open, onClose, onSelect }: ImageSearc
     setLoading(true);
     setSearched(true);
     try {
-      const res = await fetch(`/api/search-images?q=${encodeURIComponent(query.trim())}`);
+      const res = await authFetch(`/api/search-images?q=${encodeURIComponent(query.trim())}`);
       const data = await res.json();
       if (res.ok) {
         setPhotos(data.photos ?? []);

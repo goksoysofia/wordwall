@@ -28,15 +28,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `/api/*` — REST endpoints (activities, templates, live-sessions, upload)
 
 ### Game Components (`src/components/`)
-8 activity types, each accepting `options`, `theme`, and `onComplete(stats)`:
+18 activity types, each accepting `options`, `theme`, and `onComplete(stats)`:
 - `SpinningWheel` (wheel), `CardGrid`/`CardStack` (card), `MatchGame` (match), `GroupSort` (group-sort), `Quiz` (quiz), `MissingWord` (missing-word), `MemoryGame` (memory), `BalloonPop` (balloon-pop)
+- `SequenceGame` (sequence), `SentenceGame` (sentence), `UnscrambleGame` (unscramble), `OddOneOut` (odd-one-out), `TrueFalse` (true-false), `ListenChoose` (listen-choose), `WordSearch` (word-search), `Flashcards` (flashcards), `BingoGame` (bingo), `SyllableCount` (syllable-count)
 
 All games track `GameStats` (totalItems, correctCount, wrongCount, timeSeconds) and pass results to `ResultsScreen`.
 
 ### Shared Utilities (`src/lib/`)
-- `supabase.ts` — Client (anon key) and server (service role key) Supabase instances
+- `supabase.ts` — Browser client (anon key) singleton; used for auth only (DB access goes through API routes)
+- `api-server.ts` — **Server-only** helpers: `supabaseAdmin` (service role), `getUserFromRequest`, `parseJsonBody`, `jsonError`/`serverError` (sanitized errors), in-memory `rateLimit`. Never import from client code.
+- `validation.ts` — Server-side input validation for activity/template payloads (`ACTIVITY_TYPES`, size/length limits)
+- `auth-fetch.ts` — `authFetch` client wrapper that attaches the Supabase bearer token (skips JSON Content-Type for FormData)
+- `auth-context.tsx` — `AuthProvider` / `useAuth` (Google OAuth via Supabase)
+- `email.ts` — Nodemailer (Gmail SMTP) completion emails; HTML-escapes all user input
 - `sounds.ts` — Audio synthesis engine with ADSR envelopes, procedural effects
-- `themes.ts` — 10 curated themes with Turkish labels, emojis, color palettes
+- `themes.ts` — Curated themes with Turkish labels, emojis, color palettes
+
+### Security model
+- All DB access flows through API routes using `SUPABASE_SERVICE_ROLE_KEY` (RLS-bypassing) — **each route owns its own authz checks** via `getUserFromRequest` + ownership verification.
+- Mutating routes validate input (`validation.ts`), return sanitized errors (`serverError`), and rate-limit public/expensive endpoints (`rateLimit`).
+- RLS policies (`supabase/migrations/`) are defense-in-depth only.
 
 ### Types (`src/types/`)
 - `activity.ts` — ActivityType, ActivityOption, Activity
@@ -63,8 +74,13 @@ All UI is in **Turkish**. Target users are Turkish speech/language therapists. K
 ## Environment Variables
 
 ```
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY
-PEXELS_API_KEY
+NEXT_PUBLIC_SUPABASE_URL        # Supabase project URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY   # Public anon key (client auth)
+SUPABASE_SERVICE_ROLE_KEY       # Service role key (server-only, API routes)
+NEXT_PUBLIC_SITE_URL            # Canonical origin — OG metadata + completion email links
+PEXELS_API_KEY                  # "Görsel Ara" image search
+GMAIL_USER                      # Gmail SMTP sender (therapist completion emails)
+GMAIL_APP_PASSWORD              # Gmail app password
 ```
+
+See `.env.local.example` for the full template.

@@ -1,28 +1,71 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import {
+  supabaseAdmin,
+  parseJsonBody,
+  getClientIp,
+  rateLimit,
+  rateLimited,
+  jsonError,
+} from "@/lib/api-server";
 import { sendActivityCompletionEmail } from "@/lib/email";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const MAX_WRONG_ITEMS = 100;
+const MAX_STR = 200;
+
+/** Coerce to a finite, non-negative integer within [0, max]. */
+function clampInt(value: unknown, max = 100_000): number {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.min(n, max);
+}
+
+function clampStr(value: unknown, max = MAX_STR): string {
+  return typeof value === "string" ? value.slice(0, max) : "";
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { activityId, stats, playerName } = body;
-
-    if (!activityId || !stats) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    // Public endpoint — throttle per IP to prevent email-spam amplification.
+    if (!rateLimit(`notify:${getClientIp(request)}`, 20, 60_000)) {
+      return rateLimited();
     }
 
-    // 1. Try to fetch the activity
+    const body = await parseJsonBody<{
+      activityId?: string;
+      stats?: Record<string, unknown>;
+      playerName?: string;
+    }>(request);
+
+    const activityId = body?.activityId;
+    const rawStats = body?.stats;
+
+    if (!activityId || typeof activityId !== "string" || !rawStats || typeof rawStats !== "object") {
+      return jsonError("Eksik veya geçersiz alanlar.", 400);
+    }
+
+    // Sanitize / clamp all client-supplied values before they reach the email.
+    const stats = {
+      totalItems: clampInt(rawStats.totalItems),
+      correctCount: clampInt(rawStats.correctCount),
+      wrongCount: clampInt(rawStats.wrongCount),
+      timeSeconds: clampInt(rawStats.timeSeconds, 86_400),
+      completedAt: typeof rawStats.completedAt === "string" ? rawStats.completedAt : new Date().toISOString(),
+      wrongItems: Array.isArray(rawStats.wrongItems)
+        ? rawStats.wrongItems.slice(0, MAX_WRONG_ITEMS).map((it: Record<string, unknown>) => ({
+            text: clampStr(it?.text),
+            correctAnswer: clampStr(it?.correctAnswer),
+            userAnswer: clampStr(it?.userAnswer),
+          }))
+        : [],
+    };
+    const playerName = clampStr(body?.playerName, 60) || "Anonim Danışan";
+
     let activityTitle = "Bilinmeyen Etkinlik";
     let activityType = "Oyun";
     let therapistEmail = process.env.GMAIL_USER || "";
     let therapistName = "Değerli Danışman";
 
-    const { data: activity } = await supabase
+    const { data: activity } = await supabaseAdmin
       .from("activities")
       .select("*")
       .eq("id", activityId)
@@ -32,10 +75,9 @@ export async function POST(request: NextRequest) {
       activityTitle = activity.title;
       activityType = activity.type;
 
-      // 2. Try to get the therapist (creator) info
       if (activity.user_id) {
         try {
-          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
+          const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(
             activity.user_id
           );
           if (!userError && userData?.user?.email) {
@@ -47,12 +89,7 @@ export async function POST(request: NextRequest) {
         }
       }
     } else {
-      console.warn("[notify-completion] Activity not found in DB, using fallback defaults for sending email:", activityId);
-    }
-
-    // Ensure we have a recipient email
-    if (!therapistEmail && process.env.GMAIL_USER) {
-      therapistEmail = process.env.GMAIL_USER;
+      console.warn("[notify-completion] Activity not found, using fallback defaults:", activityId);
     }
 
     if (!therapistEmail) {
@@ -60,38 +97,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // 3. Check if Gmail env vars are configured
     if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
       console.warn("[notify-completion] Gmail credentials not configured, skipping email");
-      return NextResponse.json({ ok: true });
+      // Durum bilgisini döndür (sır değil) — kurulum doğrulamasını kolaylaştırır.
+      return NextResponse.json({
+        ok: true,
+        emailSent: false,
+        reason: "gmail_credentials_missing",
+        hasUser: !!process.env.GMAIL_USER,
+        hasPassword: !!process.env.GMAIL_APP_PASSWORD,
+      });
     }
 
-    // 4. Build play URL
-    const origin = request.headers.get("origin") || request.headers.get("referer")?.replace(/\/[^/]*$/, "") || "https://wordwall.app";
-    const playUrl = `${origin}/play/${activityId}`;
+    // Build the play URL from a trusted, server-configured origin (never the request headers).
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://wordwall.app").replace(/\/+$/, "");
+    const playUrl = `${siteUrl}/play/${encodeURIComponent(activityId)}`;
 
-    // 5. Send email
     await sendActivityCompletionEmail({
       therapistEmail,
       therapistName,
-      playerName: playerName || "Anonim Danışan",
+      playerName,
       activityTitle,
       activityType,
-      stats: {
-        totalItems: stats.totalItems,
-        correctCount: stats.correctCount,
-        wrongCount: stats.wrongCount,
-        timeSeconds: stats.timeSeconds,
-        completedAt: stats.completedAt,
-        wrongItems: stats.wrongItems || [],
-      },
+      stats,
       playUrl,
     });
 
-    console.log(`[notify-completion] Email sent to ${therapistEmail} for activity ${activityId}`);
-    return NextResponse.json({ ok: true });
+    console.log(`[notify-completion] Email sent for activity ${activityId}`);
+    return NextResponse.json({ ok: true, emailSent: true });
   } catch (error) {
-    // Log the error but return success — don't break the player experience
+    // Log but return success — never break the player experience over a notification.
     console.error("[notify-completion] Error sending email:", error);
     return NextResponse.json({ ok: true });
   }

@@ -8,6 +8,7 @@ import { TEMPLATE_CATEGORIES } from "@/types/template";
 import { getTheme } from "@/lib/themes";
 import { useAuth } from "@/lib/auth-context";
 import { authFetch } from "@/lib/auth-fetch";
+import PageLoader from "@/components/PageLoader";
 
 const ACTIVITY_TYPE_LABELS: Record<string, { icon: string; label: string }> = {
   wheel: { icon: "🎡", label: "Çark" },
@@ -73,8 +74,8 @@ export default function TemplatesPage() {
   }, [activeCategory, searchQuery, sort, user?.id]);
 
   useEffect(() => {
-    void loadTemplates();
-  }, [loadTemplates]);
+    if (user) void loadTemplates();
+  }, [user, loadTemplates]);
 
   const handleUse = async (templateId: string) => {
     setUsingId(templateId);
@@ -112,6 +113,10 @@ export default function TemplatesPage() {
         .finally(() => setTryingId(null));
     }
   };
+
+  // Auth gate — avoid flashing the marketplace before the redirect to /login fires.
+  if (authLoading) return <PageLoader />;
+  if (!user) return null;
 
   return (
     <div className="relative min-h-screen overflow-hidden">

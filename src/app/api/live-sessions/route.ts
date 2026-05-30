@@ -1,86 +1,83 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { randomInt } from "crypto";
+import {
+  supabaseAdmin,
+  parseJsonBody,
+  getClientIp,
+  rateLimit,
+  rateLimited,
+  jsonError,
+  serverError,
+} from "@/lib/api-server";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
+/** Cryptographically-random 6-digit session code (harder to enumerate than Math.random). */
 function generateCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(100000, 1000000).toString();
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
+  // Throttle session creation per IP.
+  if (!rateLimit(`live-create:${getClientIp(request)}`, 20, 60_000)) {
+    return rateLimited();
+  }
 
-    if (!body.activityId || !body.activityTitle) {
-      return NextResponse.json(
-        { error: "activityId and activityTitle are required" },
-        { status: 400 }
-      );
-    }
+  const body = await parseJsonBody<{ activityId?: string; activityTitle?: string }>(request);
+  if (!body?.activityId || typeof body.activityId !== "string" || !body.activityTitle) {
+    return jsonError("activityId ve activityTitle zorunludur.", 400);
+  }
+  const activityTitle = String(body.activityTitle).slice(0, 200);
 
-    // Generate a unique 6-digit code, retry on collision
-    let code: string = "";
-    let attempts = 0;
-    const maxAttempts = 10;
+  // Generate a unique 6-digit code, retry on collision
+  let code = "";
+  let attempts = 0;
+  const maxAttempts = 10;
 
-    while (attempts < maxAttempts) {
-      code = generateCode();
-      const { data: existing } = await supabase
-        .from("live_sessions")
-        .select("id")
-        .eq("code", code)
-        .eq("is_active", true)
-        .single();
-
-      if (!existing) break;
-      attempts++;
-    }
-
-    if (attempts >= maxAttempts) {
-      return NextResponse.json(
-        { error: "Could not generate a unique session code. Please try again." },
-        { status: 500 }
-      );
-    }
-
-    const { data, error } = await supabase
+  while (attempts < maxAttempts) {
+    code = generateCode();
+    const { data: existing } = await supabaseAdmin
       .from("live_sessions")
-      .insert({
-        code,
-        activity_id: body.activityId,
-        activity_title: body.activityTitle,
-        is_active: true,
-        current_item_index: 0,
-        participants: 0,
-      })
-      .select()
+      .select("id")
+      .eq("code", code)
+      .eq("is_active", true)
       .single();
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json(data);
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid request body" },
-      { status: 400 }
-    );
+    if (!existing) break;
+    attempts++;
   }
+
+  if (attempts >= maxAttempts) {
+    return jsonError("Oturum kodu oluşturulamadı. Lütfen tekrar deneyin.", 503);
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("live_sessions")
+    .insert({
+      code,
+      activity_id: body.activityId,
+      activity_title: activityTitle,
+      is_active: true,
+      current_item_index: 0,
+      participants: 0,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return serverError("live-sessions.POST", error);
+  }
+
+  return NextResponse.json(data);
 }
 
 export async function GET() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("live_sessions")
     .select("*")
     .eq("is_active", true)
     .order("created_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return serverError("live-sessions.GET", error);
   }
 
   return NextResponse.json(data);

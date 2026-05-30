@@ -8,6 +8,7 @@ import { themes } from "@/lib/themes";
 import { useAuth } from "@/lib/auth-context";
 import { authFetch } from "@/lib/auth-fetch";
 import ImageSearchModal from "@/components/ImageSearchModal";
+import PageLoader from "@/components/PageLoader";
 import type { Activity, ActivityType, DisplayMode } from "@/types/activity";
 
 interface OptionRow {
@@ -74,6 +75,7 @@ export default function EditActivityPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [imageSearchTarget, setImageSearchTarget] = useState<{ optionId: string; isPair: boolean } | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   // Quiz multi-question state
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestionRow[]>([]);
 
@@ -99,6 +101,10 @@ export default function EditActivityPage() {
           return;
         }
         const data: Activity = await res.json();
+        if (!data || !Array.isArray(data.options)) {
+          setError("Etkinlik içeriği bozuk veya eksik.");
+          return;
+        }
         setActivityType(data.type);
         setDisplayMode(data.display_mode);
         setSelectedThemeId(data.theme);
@@ -207,7 +213,7 @@ export default function EditActivityPage() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const res = await authFetch("/api/upload", { method: "POST", body: fd });
       const contentType = res.headers.get("content-type") ?? "";
       if (!contentType.includes("application/json")) {
         const text = await res.text();
@@ -222,7 +228,7 @@ export default function EditActivityPage() {
         updateOption(optionId, { imageUrl: data.url });
       }
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Görsel yüklenirken hata oluştu.");
+      setUploadError(e instanceof Error ? e.message : "Görsel yüklenirken hata oluştu.");
     } finally {
       setUploadingIds((s) => {
         const next = new Set(s);
@@ -347,18 +353,12 @@ export default function EditActivityPage() {
     }
   }
 
+  // Auth gate — avoid flashing the editor before the redirect to /login fires.
+  if (authLoading) return <PageLoader />;
+  if (!user) return null;
+
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center" style={{ background: "linear-gradient(135deg, #FFF8F0, #FFE8F5)" }}>
-        <div className="flex flex-col items-center gap-5">
-          <div className="relative">
-            <div className="h-16 w-16 animate-spin rounded-full border-[4px] border-[#FFE8F5]" style={{ borderTopColor: "#FF6B9D" }} />
-            <div className="absolute inset-0 flex items-center justify-center text-2xl">✏️</div>
-          </div>
-          <p className="font-heading text-lg font-bold text-[#8B7BAD]">Yükleniyor...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader label="Yükleniyor..." />;
   }
 
   if (error) {
@@ -379,6 +379,25 @@ export default function EditActivityPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
+      {/* Upload error toast */}
+      {uploadError && (
+        <div className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
+          <div className="flex max-w-md items-start gap-3 rounded-2xl border-2 border-red-200 bg-white px-4 py-3 shadow-xl">
+            <span className="text-lg">⚠️</span>
+            <p className="flex-1 text-sm font-semibold text-red-600">{uploadError}</p>
+            <button
+              type="button"
+              onClick={() => setUploadError(null)}
+              className="text-red-400 transition hover:text-red-600"
+              aria-label="Kapat"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
       {/* Background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-gradient-to-br from-[#FFF8F0] via-[#FFF3E4] to-[#E8F4FD]" />

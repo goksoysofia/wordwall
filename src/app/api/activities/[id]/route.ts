@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-async function getUserFromRequest(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) return null;
-
-  const token = authHeader.slice(7);
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !user) return null;
-  return user;
-}
+import {
+  supabaseAdmin,
+  getUserFromRequest,
+  parseJsonBody,
+  jsonError,
+  serverError,
+} from "@/lib/api-server";
+import { validateActivityInput } from "@/lib/validation";
 
 export async function GET(
   _request: NextRequest,
@@ -28,11 +20,26 @@ export async function GET(
     .eq("id", id)
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 404 });
+  if (error || !data) {
+    return jsonError("Etkinlik bulunamadı.", 404);
   }
 
   return NextResponse.json(data);
+}
+
+/** Confirm the activity exists and is owned by the requesting user. */
+async function assertOwnership(id: string, userId: string) {
+  const { data: existing } = await supabaseAdmin
+    .from("activities")
+    .select("user_id")
+    .eq("id", id)
+    .single();
+
+  if (!existing) return { ok: false as const, status: 404, message: "Etkinlik bulunamadı." };
+  if (existing.user_id !== userId) {
+    return { ok: false as const, status: 403, message: "Bu etkinlik üzerinde yetkiniz yok." };
+  }
+  return { ok: true as const };
 }
 
 export async function PUT(
@@ -42,32 +49,29 @@ export async function PUT(
   const { id } = await params;
   const user = await getUserFromRequest(request);
   if (!user) {
-    return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+    return jsonError("Giriş yapmanız gerekiyor.", 401);
   }
 
-  // Verify ownership
-  const { data: existing } = await supabaseAdmin
-    .from("activities")
-    .select("user_id")
-    .eq("id", id)
-    .single();
+  const owner = await assertOwnership(id, user.id);
+  if (!owner.ok) return jsonError(owner.message, owner.status);
 
-  if (existing?.user_id && existing.user_id !== user.id) {
-    return NextResponse.json({ error: "Bu etkinliği düzenleme yetkiniz yok." }, { status: 403 });
+  const body = await parseJsonBody(request);
+  const validation = validateActivityInput(body);
+  if (!validation.ok) {
+    return jsonError(validation.error, 400);
   }
-
-  const body = await request.json();
+  const v = validation.value;
 
   const { data, error } = await supabaseAdmin
     .from("activities")
     .update({
-      title: body.title,
-      type: body.type,
-      display_mode: body.display_mode,
-      theme: body.theme,
-      category: body.category || null,
-      show_feedback: body.show_feedback ?? true,
-      options: body.options,
+      title: v.title,
+      type: v.type,
+      display_mode: v.display_mode,
+      theme: v.theme,
+      category: v.category,
+      show_feedback: v.show_feedback,
+      options: v.options,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
@@ -75,7 +79,7 @@ export async function PUT(
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return serverError("activities.PUT", error);
   }
 
   return NextResponse.json(data);
@@ -88,27 +92,16 @@ export async function DELETE(
   const { id } = await params;
   const user = await getUserFromRequest(request);
   if (!user) {
-    return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+    return jsonError("Giriş yapmanız gerekiyor.", 401);
   }
 
-  // Verify ownership
-  const { data: existing } = await supabaseAdmin
-    .from("activities")
-    .select("user_id")
-    .eq("id", id)
-    .single();
+  const owner = await assertOwnership(id, user.id);
+  if (!owner.ok) return jsonError(owner.message, owner.status);
 
-  if (existing?.user_id && existing.user_id !== user.id) {
-    return NextResponse.json({ error: "Bu etkinliği silme yetkiniz yok." }, { status: 403 });
-  }
-
-  const { error } = await supabaseAdmin
-    .from("activities")
-    .delete()
-    .eq("id", id);
+  const { error } = await supabaseAdmin.from("activities").delete().eq("id", id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return serverError("activities.DELETE", error);
   }
 
   return NextResponse.json({ success: true });

@@ -6,7 +6,18 @@ export type ActivityType =
   | "quiz"
   | "missing-word"
   | "memory"
-  | "balloon-pop";
+  | "balloon-pop"
+  // --- Yeni etkinlik tipleri ---
+  | "sequence" // Sıralama
+  | "sentence" // Cümle Kurma
+  | "unscramble" // Kelime Oluştur (karışık harf/hece)
+  | "odd-one-out" // Hangisi Farklı
+  | "true-false" // Doğru / Yanlış
+  | "listen-choose" // Dinle ve Bul
+  | "word-search" // Kelime Avı
+  | "flashcards" // Konuşma Kartları
+  | "bingo" // Tombala
+  | "syllable-count"; // Hece Sayısı
 
 export type CardDisplayMode = "grid" | "stack";
 export type BalloonDisplayMode = "pop" | "read";

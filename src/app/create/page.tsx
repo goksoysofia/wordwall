@@ -47,6 +47,16 @@ const ACTIVITY_TYPES: { type: ActivityType; emoji: string; label: string; desc: 
   { type: "missing-word", emoji: "✏️", label: "Boşluk Doldur", desc: "Cümledeki boşluğu tamamla" },
   { type: "memory", emoji: "🧠", label: "Hafıza Oyunu", desc: "Eşlerini bul, kartları çevir" },
   { type: "balloon-pop", emoji: "🎈", label: "Balon Patlatma", desc: "Doğru balonları patlat" },
+  { type: "sequence", emoji: "🔢", label: "Sıralama", desc: "Öğeleri doğru sıraya diz" },
+  { type: "sentence", emoji: "🧩", label: "Cümle Kurma", desc: "Kelimelerden cümle oluştur" },
+  { type: "unscramble", emoji: "🔤", label: "Kelime Oluştur", desc: "Karışık harfleri sırala" },
+  { type: "odd-one-out", emoji: "🔍", label: "Hangisi Farklı", desc: "Gruba uymayanı bul" },
+  { type: "true-false", emoji: "⚖️", label: "Doğru / Yanlış", desc: "İfadeyi değerlendir" },
+  { type: "listen-choose", emoji: "👂", label: "Dinle ve Bul", desc: "Duyduğunu eşleştir" },
+  { type: "word-search", emoji: "🔎", label: "Kelime Avı", desc: "Izgarada gizli kelime bul" },
+  { type: "flashcards", emoji: "🗂️", label: "Konuşma Kartları", desc: "Telaffuz ve tekrar kartları" },
+  { type: "bingo", emoji: "🎱", label: "Tombala", desc: "Söyleneni bul ve işaretle" },
+  { type: "syllable-count", emoji: "👏", label: "Hece Sayısı", desc: "Kelime kaç hece?" },
 ];
 
 function getFlowSteps(activityType: ActivityType | null): FlowStep[] {
@@ -206,6 +216,46 @@ export default function CreateActivityPage() {
           options.some((o) => o.isCorrect)
         );
 
+      case "sequence":
+        return options.length >= 2 && options.every((o) => o.text.trim() || o.imageUrl);
+
+      case "sentence":
+        return title.trim().split(/\s+/).filter(Boolean).length >= 2;
+
+      case "unscramble":
+        return options.length >= 1 && options.every((o) => o.text.trim().length >= 1);
+
+      case "odd-one-out":
+        return (
+          options.length >= 3 &&
+          options.every((o) => o.text.trim() || o.imageUrl) &&
+          options.some((o) => o.isCorrect)
+        );
+
+      case "true-false":
+        return options.length >= 2 && options.every((o) => o.text.trim() || o.imageUrl);
+
+      case "listen-choose":
+        return options.length >= 2 && options.every((o) => o.text.trim());
+
+      case "word-search":
+        return (
+          options.length >= 1 &&
+          options.every((o) => {
+            const w = o.text.trim().replace(/\s/g, "");
+            return w.length >= 2 && w.length <= 12;
+          })
+        );
+
+      case "flashcards":
+        return options.length >= 1 && options.every((o) => o.text.trim() || o.imageUrl);
+
+      case "bingo":
+        return options.length >= 4 && options.every((o) => o.text.trim() || o.imageUrl);
+
+      case "syllable-count":
+        return options.length >= 1 && options.every((o) => o.text.trim());
+
       default:
         return false;
     }
@@ -236,17 +286,28 @@ export default function CreateActivityPage() {
   }
 
   function toggleCorrect(id: string) {
-    if (activityType === "quiz" || activityType === "missing-word") {
-      // Single correct answer
+    if (activityType === "quiz" || activityType === "missing-word" || activityType === "odd-one-out") {
+      // Tek doğru cevap
       setOptions((prev) =>
         prev.map((o) => ({ ...o, isCorrect: o.id === id }))
       );
     } else {
-      // Multiple correct (balloon-pop)
+      // Çoklu doğru (balloon-pop, true-false)
       setOptions((prev) =>
         prev.map((o) => (o.id === id ? { ...o, isCorrect: !o.isCorrect } : o))
       );
     }
+  }
+
+  // Sıralama etkinliğinde öğe sırasını değiştir (doğru sıra = giriş sırası)
+  function moveOption(index: number, dir: -1 | 1) {
+    setOptions((prev) => {
+      const next = [...prev];
+      const j = index + dir;
+      if (j < 0 || j >= next.length) return prev;
+      [next[index], next[j]] = [next[j], next[index]];
+      return next;
+    });
   }
 
   function handleWordBankAdd(words: WordEntry[]) {
@@ -332,7 +393,7 @@ export default function CreateActivityPage() {
         }));
     }
 
-    if (payloadOptions.length === 0) {
+    if (payloadOptions.length === 0 && activityType !== "sentence") {
       setSaveError("En az bir geçerli seçenek ekleyin.");
       return;
     }
@@ -634,6 +695,16 @@ export default function CreateActivityPage() {
                   {activityType === "balloon-pop" && displayMode === "read" && "Balonlara eklenecek seçenekleri girin"}
                   {activityType === "balloon-pop" && displayMode !== "read" && "Soruyu ve balonları oluşturun"}
                   {activityType === "memory" && "Eşleştirilecek kartları ekleyin"}
+                  {activityType === "sequence" && "Öğeleri DOĞRU SIRAYLA ekleyin (oyunda karışır)"}
+                  {activityType === "sentence" && "Doğru cümleyi yazın, isterseniz çeldirici kelime ekleyin"}
+                  {activityType === "unscramble" && "Kelimeleri ekleyin (hece için tire kullanın: el-ma)"}
+                  {activityType === "odd-one-out" && "Seçenekleri ekleyin, farklı olanı işaretleyin"}
+                  {activityType === "true-false" && "İfadeleri ekleyin, doğru olanları işaretleyin"}
+                  {activityType === "listen-choose" && "Seslendirilecek kelimeleri (ve görselleri) ekleyin"}
+                  {activityType === "word-search" && "Izgarada gizlenecek kelimeleri ekleyin"}
+                  {activityType === "flashcards" && "Telaffuz / çalışma kartlarını ekleyin"}
+                  {activityType === "bingo" && "Tombala öğelerini ekleyin (en az 4)"}
+                  {activityType === "syllable-count" && "Hecesi sayılacak kelimeleri ekleyin"}
                   {(activityType === "wheel" || activityType === "card") && "Etkinliğe ad verin ve seçenekleri ekleyin"}
                 </p>
               </div>
@@ -649,7 +720,15 @@ export default function CreateActivityPage() {
                       ? "Soru"
                       : activityType === "missing-word"
                         ? "Cümle (___ ile boşluk belirtin)"
-                        : "Etkinlik adı"}
+                        : activityType === "sentence"
+                          ? "Cümle (kelimeler buradan oluşur)"
+                          : activityType === "sequence"
+                            ? "Yönerge"
+                            : activityType === "odd-one-out"
+                              ? "Yönerge / Soru"
+                              : ["true-false", "listen-choose", "word-search", "flashcards", "bingo", "syllable-count", "unscramble"].includes(activityType ?? "")
+                                ? "Yönerge (isteğe bağlı)"
+                                : "Etkinlik adı"}
                 </label>
                 <input
                   id="activity-title"
@@ -663,13 +742,36 @@ export default function CreateActivityPage() {
                         ? "Örn. Kedi ___ içer."
                         : activityType === "balloon-pop"
                           ? "Örn. Hangileri meyve?"
-                          : "Örn. Haftanın kelimeleri"
+                          : activityType === "sentence"
+                            ? "Örn. Köpek topu yakaladı"
+                            : activityType === "sequence"
+                              ? "Örn. Küçükten büyüğe sırala"
+                              : activityType === "odd-one-out"
+                                ? "Örn. Hangisi meyve değil?"
+                                : activityType === "unscramble"
+                                  ? "Örn. Harfleri sırala"
+                                  : activityType === "listen-choose"
+                                    ? "Örn. Duyduğun kelimeyi bul"
+                                    : activityType === "word-search"
+                                      ? "Örn. Hayvanları bul"
+                                      : activityType === "flashcards"
+                                        ? "Örn. 3 kez tekrar et"
+                                        : activityType === "bingo"
+                                          ? "Örn. Söyleneni bul"
+                                          : activityType === "syllable-count"
+                                            ? "Örn. Kaç hece var?"
+                                            : "Örn. Haftanın kelimeleri"
                   }
                   className="input-playful"
                 />
                 {activityType === "missing-word" && !title.includes("___") && title.length > 0 && (
                   <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-amber-500">
                     <span>⚠️</span> Cümleye ___ (üç alt çizgi) ile boşluk ekleyin
+                  </p>
+                )}
+                {activityType === "sentence" && title.length > 0 && title.trim().split(/\s+/).filter(Boolean).length < 2 && (
+                  <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-amber-500">
+                    <span>⚠️</span> En az 2 kelimelik bir cümle yazın
                   </p>
                 )}
               </div>
@@ -691,7 +793,7 @@ export default function CreateActivityPage() {
               </div>
 
               {/* Show Feedback Toggle */}
-              {activityType && ["quiz", "missing-word", "balloon-pop", "match", "group-sort"].includes(activityType) && !(activityType === "balloon-pop" && displayMode === "read") && (
+              {activityType && ["quiz", "missing-word", "balloon-pop", "match", "group-sort", "sequence", "sentence", "unscramble", "odd-one-out", "true-false", "listen-choose", "bingo", "syllable-count"].includes(activityType) && !(activityType === "balloon-pop" && displayMode === "read") && (
                 <div className="card-playful flex items-center justify-between p-5">
                   <div>
                     <div className="flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
@@ -777,7 +879,7 @@ export default function CreateActivityPage() {
               )}
 
               {/* Word Bank Button — for simple list types */}
-              {activityType && ["wheel", "card", "memory", "balloon-pop"].includes(activityType) && (
+              {activityType && ["wheel", "card", "memory", "balloon-pop", "sequence", "unscramble", "listen-choose", "word-search", "flashcards", "syllable-count", "bingo"].includes(activityType) && (
                 <button
                   type="button"
                   onClick={() => setShowWordBank(true)}
@@ -947,7 +1049,25 @@ export default function CreateActivityPage() {
                 <div className="flex items-center justify-between px-1">
                   <p className="flex items-center gap-2 text-sm font-bold text-[#2D1B69]">
                     <span>🎯</span>
-                    {activityType === "match" ? "Çiftler" : activityType === "balloon-pop" ? "Cevaplar" : activityType === "missing-word" ? "Kelime seçenekleri" : "Seçenekler"}
+                    {activityType === "match"
+                      ? "Çiftler"
+                      : activityType === "balloon-pop"
+                        ? "Cevaplar"
+                        : activityType === "missing-word"
+                          ? "Kelime seçenekleri"
+                          : activityType === "sentence"
+                            ? "Çeldirici kelimeler (isteğe bağlı)"
+                            : activityType === "sequence"
+                              ? "Sıralanacak öğeler"
+                              : activityType === "true-false"
+                                ? "İfadeler"
+                                : activityType === "flashcards"
+                                  ? "Kartlar"
+                                  : activityType === "bingo"
+                                    ? "Tombala öğeleri"
+                                    : ["unscramble", "word-search", "syllable-count", "listen-choose"].includes(activityType ?? "")
+                                      ? "Kelimeler"
+                                      : "Seçenekler"}
                   </p>
                   <p className="rounded-full bg-[#FF6B9D]/10 px-3 py-0.5 text-xs font-bold text-[#FF6B9D]">
                     {options.filter((o) => o.text.trim() || o.imageUrl).length} eklendi
@@ -957,12 +1077,37 @@ export default function CreateActivityPage() {
                 {options.map((opt, idx) => (
                   <div key={opt.id} className="card-playful p-4">
                     <div className="mb-3 flex items-center justify-between">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#FFD93D] to-[#FF8A50] text-sm font-bold text-white">
-                        {idx + 1}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#FFD93D] to-[#FF8A50] text-sm font-bold text-white">
+                          {idx + 1}
+                        </span>
+                        {/* Sıralama: öğe sırasını değiştir */}
+                        {activityType === "sequence" && (
+                          <div className="flex items-center gap-0.5">
+                            <button
+                              type="button"
+                              onClick={() => moveOption(idx, -1)}
+                              disabled={idx === 0}
+                              aria-label="Yukarı taşı"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#F8F5FF] text-[#8B7BAD] transition hover:bg-[#F0EAFF] disabled:opacity-30"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" /></svg>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveOption(idx, 1)}
+                              disabled={idx === options.length - 1}
+                              aria-label="Aşağı taşı"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#F8F5FF] text-[#8B7BAD] transition hover:bg-[#F0EAFF] disabled:opacity-30"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2">
-                        {/* Correct toggle for missing-word/balloon-pop */}
-                        {(activityType === "missing-word" || (activityType === "balloon-pop" && displayMode !== "read")) && (
+                        {/* Doğru/Farklı işaretleme */}
+                        {(activityType === "missing-word" || activityType === "odd-one-out" || activityType === "true-false" || (activityType === "balloon-pop" && displayMode !== "read")) && (
                           <button
                             type="button"
                             onClick={() => toggleCorrect(opt.id)}
@@ -972,7 +1117,11 @@ export default function CreateActivityPage() {
                                 : "bg-[#F8F5FF] text-[#8B7BAD] hover:bg-emerald-50 hover:text-emerald-600"
                             }`}
                           >
-                            {opt.isCorrect ? "✅ Doğru" : "Doğru?"}
+                            {activityType === "odd-one-out"
+                              ? (opt.isCorrect ? "✅ Farklı" : "Farklı?")
+                              : activityType === "true-false"
+                                ? (opt.isCorrect ? "✅ Doğru" : "Doğru mu?")
+                                : (opt.isCorrect ? "✅ Doğru" : "Doğru?")}
                           </button>
                         )}
                         <button
@@ -993,7 +1142,17 @@ export default function CreateActivityPage() {
                       type="text"
                       value={opt.text}
                       onChange={(e) => updateOption(opt.id, { text: e.target.value })}
-                      placeholder={activityType === "match" ? "Sol taraf (öğe)" : "Yazı ekle..."}
+                      placeholder={
+                        activityType === "match"
+                          ? "Sol taraf (öğe)"
+                          : activityType === "true-false"
+                            ? "İfade yaz..."
+                            : activityType === "sentence"
+                              ? "Çeldirici kelime..."
+                              : ["unscramble", "word-search", "syllable-count", "listen-choose"].includes(activityType ?? "")
+                                ? "Kelime yaz..."
+                                : "Yazı ekle..."
+                      }
                       className="input-playful mb-3"
                     />
 
@@ -1137,7 +1296,19 @@ export default function CreateActivityPage() {
                 className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#D0C0F0] bg-[#F8F5FF]/50 py-4 text-sm font-bold text-[#8B7BAD] transition hover:border-[#FF6B9D] hover:bg-[#FFF5F8] hover:text-[#FF6B9D]"
               >
                 <span className="text-lg">+</span>
-                {activityType === "match" ? "Çift ekle" : "Seçenek ekle"}
+                {activityType === "match"
+                  ? "Çift ekle"
+                  : activityType === "flashcards"
+                    ? "Kart ekle"
+                    : activityType === "true-false"
+                      ? "İfade ekle"
+                      : activityType === "sentence"
+                        ? "Çeldirici ekle"
+                        : activityType === "bingo"
+                          ? "Öğe ekle"
+                          : ["unscramble", "word-search", "syllable-count", "listen-choose"].includes(activityType ?? "")
+                            ? "Kelime ekle"
+                            : "Seçenek ekle"}
               </button>
               </>
               )}
@@ -1164,7 +1335,16 @@ export default function CreateActivityPage() {
                     "Her çiftin sağ tarafını doldurun. "}
                   {activityType === "group-sort" && options.some((o) => !o.group) &&
                     "Her öğe için bir grup seçin. "}
-                  {options.some((o) => !o.text.trim() && !o.imageUrl) &&
+                  {activityType === "odd-one-out" && !options.some((o) => o.isCorrect) &&
+                    "Farklı olanı işaretleyin. "}
+                  {activityType === "odd-one-out" && options.length < 3 &&
+                    "En az 3 seçenek ekleyin. "}
+                  {activityType === "bingo" && options.length < 4 &&
+                    "En az 4 öğe ekleyin. "}
+                  {activityType === "word-search" &&
+                    options.some((o) => { const w = o.text.trim().replace(/\s/g, ""); return o.text.trim() && (w.length < 2 || w.length > 12); }) &&
+                    "Kelimeler 2-12 harf olmalı. "}
+                  {activityType !== "sentence" && options.some((o) => !o.text.trim() && !o.imageUrl) &&
                     "Tüm seçeneklerde yazı veya görsel olmalı."}
                 </div>
               )}
@@ -1196,7 +1376,7 @@ export default function CreateActivityPage() {
                 <div className="divide-y-3 divide-[#F5F0FF]">
                   {!(activityType === "balloon-pop" && displayMode === "read") && (
                   <div className="flex items-center justify-between px-5 py-4">
-                    <span className="text-sm font-semibold text-[#8B7BAD]">📝 {activityType === "quiz" ? "Quiz adı" : activityType === "balloon-pop" ? "Soru" : activityType === "missing-word" ? "Cümle" : "Etkinlik adı"}</span>
+                    <span className="text-sm font-semibold text-[#8B7BAD]">📝 {activityType === "quiz" ? "Quiz adı" : activityType === "balloon-pop" ? "Soru" : activityType === "missing-word" ? "Cümle" : (activityType === "sentence") ? "Cümle" : (activityType === "sequence" || activityType === "odd-one-out") ? "Yönerge" : "Etkinlik adı"}</span>
                     <span className="font-heading text-sm font-bold text-[#2D1B69]">
                       {title.trim() || "Adsız etkinlik"}
                     </span>

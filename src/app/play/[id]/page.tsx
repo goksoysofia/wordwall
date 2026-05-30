@@ -15,6 +15,16 @@ import Quiz from "@/components/Quiz";
 import MissingWord from "@/components/MissingWord";
 import MemoryGame from "@/components/MemoryGame";
 import BalloonPop from "@/components/BalloonPop";
+import SequenceGame from "@/components/SequenceGame";
+import SentenceGame from "@/components/SentenceGame";
+import UnscrambleGame from "@/components/UnscrambleGame";
+import OddOneOut from "@/components/OddOneOut";
+import TrueFalse from "@/components/TrueFalse";
+import ListenChoose from "@/components/ListenChoose";
+import WordSearch from "@/components/WordSearch";
+import Flashcards from "@/components/Flashcards";
+import BingoGame from "@/components/BingoGame";
+import SyllableCount from "@/components/SyllableCount";
 import Celebration from "@/components/Celebration";
 import ResultsScreen from "@/components/ResultsScreen";
 import PrintView from "@/components/PrintView";
@@ -363,6 +373,104 @@ export default function PlayPage() {
           theme={theme}
           showFeedback={activity.show_feedback}
           displayMode={(activity.display_mode === "pop" || activity.display_mode === "read") ? activity.display_mode : "pop"}
+          onComplete={handleComplete}
+        />
+      )}
+
+      {activity.type === "sequence" && (
+        <SequenceGame
+          options={activity.options}
+          title={activity.title}
+          theme={theme}
+          showFeedback={activity.show_feedback}
+          onComplete={handleComplete}
+        />
+      )}
+
+      {activity.type === "sentence" && (
+        <SentenceGame
+          options={activity.options}
+          title={activity.title}
+          theme={theme}
+          showFeedback={activity.show_feedback}
+          onComplete={handleComplete}
+        />
+      )}
+
+      {activity.type === "unscramble" && (
+        <UnscrambleGame
+          options={activity.options}
+          title={activity.title}
+          theme={theme}
+          showFeedback={activity.show_feedback}
+          onComplete={handleComplete}
+        />
+      )}
+
+      {activity.type === "odd-one-out" && (
+        <OddOneOut
+          options={activity.options}
+          title={activity.title}
+          theme={theme}
+          showFeedback={activity.show_feedback}
+          onComplete={handleComplete}
+        />
+      )}
+
+      {activity.type === "true-false" && (
+        <TrueFalse
+          options={activity.options}
+          title={activity.title}
+          theme={theme}
+          showFeedback={activity.show_feedback}
+          onComplete={handleComplete}
+        />
+      )}
+
+      {activity.type === "listen-choose" && (
+        <ListenChoose
+          options={activity.options}
+          title={activity.title}
+          theme={theme}
+          showFeedback={activity.show_feedback}
+          onComplete={handleComplete}
+        />
+      )}
+
+      {activity.type === "word-search" && (
+        <WordSearch
+          options={activity.options}
+          title={activity.title}
+          theme={theme}
+          onComplete={handleComplete}
+        />
+      )}
+
+      {activity.type === "flashcards" && (
+        <Flashcards
+          options={activity.options}
+          title={activity.title}
+          theme={theme}
+          onComplete={handleComplete}
+        />
+      )}
+
+      {activity.type === "bingo" && (
+        <BingoGame
+          options={activity.options}
+          title={activity.title}
+          theme={theme}
+          showFeedback={activity.show_feedback}
+          onComplete={handleComplete}
+        />
+      )}
+
+      {activity.type === "syllable-count" && (
+        <SyllableCount
+          options={activity.options}
+          title={activity.title}
+          theme={theme}
+          showFeedback={activity.show_feedback}
           onComplete={handleComplete}
         />
       )}

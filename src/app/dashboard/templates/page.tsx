@@ -18,6 +18,16 @@ const ACTIVITY_TYPE_LABELS: Record<string, { icon: string; label: string }> = {
   "missing-word": { icon: "✏️", label: "Boşluk Doldur" },
   memory: { icon: "🧠", label: "Hafıza" },
   "balloon-pop": { icon: "🎈", label: "Balon" },
+  sequence: { icon: "🔢", label: "Sıralama" },
+  sentence: { icon: "🧩", label: "Cümle Kurma" },
+  unscramble: { icon: "🔤", label: "Kelime Oluştur" },
+  "odd-one-out": { icon: "🔍", label: "Hangisi Farklı" },
+  "true-false": { icon: "⚖️", label: "Doğru/Yanlış" },
+  "listen-choose": { icon: "👂", label: "Dinle ve Bul" },
+  "word-search": { icon: "🔎", label: "Kelime Avı" },
+  flashcards: { icon: "🗂️", label: "Konuşma Kartları" },
+  bingo: { icon: "🎱", label: "Tombala" },
+  "syllable-count": { icon: "👏", label: "Hece Sayısı" },
 };
 
 export default function TemplatesPage() {

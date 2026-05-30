@@ -64,6 +64,16 @@ export async function sendActivityCompletionEmail(params: CompletionEmailParams)
     "missing-word": "✏️ Boşluk Doldur",
     memory: "🧠 Hafıza Oyunu",
     "balloon-pop": "🎈 Balon Patlatma",
+    sequence: "🔢 Sıralama",
+    sentence: "🧩 Cümle Kurma",
+    unscramble: "🔤 Kelime Oluştur",
+    "odd-one-out": "🔍 Hangisi Farklı",
+    "true-false": "⚖️ Doğru / Yanlış",
+    "listen-choose": "👂 Dinle ve Bul",
+    "word-search": "🔎 Kelime Avı",
+    flashcards: "🗂️ Konuşma Kartları",
+    bingo: "🎱 Tombala",
+    "syllable-count": "👏 Hece Sayısı",
   };
   const typeLabel = typeLabels[activityType] || activityType;
 

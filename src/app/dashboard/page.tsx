@@ -20,6 +20,16 @@ function typeLabel(type: Activity["type"]): { icon: string; label: string } {
     case "missing-word": return { icon: "✏️", label: "Boşluk Doldur" };
     case "memory": return { icon: "🧠", label: "Hafıza" };
     case "balloon-pop": return { icon: "🎈", label: "Balon" };
+    case "sequence": return { icon: "🔢", label: "Sıralama" };
+    case "sentence": return { icon: "🧩", label: "Cümle Kurma" };
+    case "unscramble": return { icon: "🔤", label: "Kelime Oluştur" };
+    case "odd-one-out": return { icon: "🔍", label: "Hangisi Farklı" };
+    case "true-false": return { icon: "⚖️", label: "Doğru/Yanlış" };
+    case "listen-choose": return { icon: "👂", label: "Dinle ve Bul" };
+    case "word-search": return { icon: "🔎", label: "Kelime Avı" };
+    case "flashcards": return { icon: "🗂️", label: "Konuşma Kartları" };
+    case "bingo": return { icon: "🎱", label: "Tombala" };
+    case "syllable-count": return { icon: "👏", label: "Hece Sayısı" };
     default: return { icon: "🎮", label: type };
   }
 }

@@ -123,6 +123,89 @@ export default function PrintView({ activity, onClose }: PrintViewProps) {
           </div>
         );
 
+      case "sequence":
+        return (
+          <div className="worksheet-section">
+            {title && <div className="quiz-question"><strong>Yönerge:</strong> {title}</div>}
+            <ol className="worksheet-list">
+              {options.map((option) => (
+                <li key={option.id} className="worksheet-list-item">
+                  <span className="item-number">(___)</span>
+                  <span className="item-text">{option.text || ""}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        );
+
+      case "sentence": {
+        const words = title.trim().split(/\s+/).filter(Boolean);
+        const distractors = options.map((o) => o.text).filter(Boolean) as string[];
+        const tiles = [...words, ...distractors].sort((a, b) => a.localeCompare(b, "tr"));
+        return (
+          <div className="worksheet-section">
+            <div className="quiz-question"><strong>Kelimeler:</strong> {tiles.join(" • ")}</div>
+            <div className="missing-word-sentence"><strong>Cümle:</strong> _______________________________________</div>
+          </div>
+        );
+      }
+
+      case "unscramble":
+        return (
+          <div className="worksheet-section">
+            {title && <div className="quiz-question"><strong>Yönerge:</strong> {title}</div>}
+            {options.map((option) => {
+              const t = option.text || "";
+              const parts = /[-·•/\s]/.test(t) ? t.split(/[-·•/\s]+/).filter(Boolean) : Array.from(t);
+              const scrambled = [...parts].sort((a, b) => a.localeCompare(b, "tr"));
+              return (
+                <div key={option.id} className="quiz-option">
+                  <span className="quiz-text">{scrambled.join(" · ")} → _______________</span>
+                </div>
+              );
+            })}
+          </div>
+        );
+
+      case "odd-one-out":
+        return (
+          <div className="worksheet-section">
+            {title && <div className="quiz-question"><strong>Yönerge:</strong> {title}</div>}
+            {options.map((option) => (
+              <div key={option.id} className="quiz-option">
+                <span className="quiz-circle">○</span>
+                <span className="quiz-text">{option.text || ""}</span>
+              </div>
+            ))}
+          </div>
+        );
+
+      case "true-false":
+        return (
+          <div className="worksheet-section">
+            {title && <div className="quiz-question"><strong>{title}</strong></div>}
+            {options.map((option) => (
+              <div key={option.id} className="match-row">
+                <span className="match-left">{option.text || ""}</span>
+                <span className="match-right">D ☐&nbsp;&nbsp;Y ☐</span>
+              </div>
+            ))}
+          </div>
+        );
+
+      case "syllable-count":
+        return (
+          <div className="worksheet-section">
+            {title && <div className="quiz-question"><strong>Yönerge:</strong> {title}</div>}
+            {options.map((option) => (
+              <div key={option.id} className="quiz-option">
+                <span className="quiz-text">{option.text || ""}</span>
+                <span className="quiz-label">&nbsp;→ ___ hece</span>
+              </div>
+            ))}
+          </div>
+        );
+
       default:
         return (
           <div className="worksheet-section">
@@ -148,6 +231,16 @@ export default function PrintView({ activity, onClose }: PrintViewProps) {
     quiz: "Test",
     "missing-word": "Eksik Kelime",
     "balloon-pop": "Balon",
+    sequence: "Sıralama",
+    sentence: "Cümle Kurma",
+    unscramble: "Kelime Oluştur",
+    "odd-one-out": "Hangisi Farklı",
+    "true-false": "Doğru / Yanlış",
+    "listen-choose": "Dinle ve Bul",
+    "word-search": "Kelime Avı",
+    flashcards: "Konuşma Kartları",
+    bingo: "Tombala",
+    "syllable-count": "Hece Sayısı",
   };
 
   return (

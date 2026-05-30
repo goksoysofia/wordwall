@@ -331,7 +331,6 @@ export default function SpinningWheel({
                     : opt.imageUrl
                       ? ""
                       : "?";
-                  const mid = polarDeg(CX, CY, (R_INNER + R_OUTER) / 2, midDeg);
                   const imgPos = polarDeg(CX, CY, (R_INNER + R_OUTER) / 2 - 6, midDeg);
 
                   return (

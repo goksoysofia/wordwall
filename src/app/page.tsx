@@ -60,7 +60,7 @@ export default function LandingPage() {
 
         /* HERO */
         .l-hero {
-          min-height: 100vh; display: flex; flex-direction: column;
+          min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;
           justify-content: center; align-items: center; text-align: center;
           padding: 8rem 2rem 4rem; position: relative; overflow: hidden;
         }

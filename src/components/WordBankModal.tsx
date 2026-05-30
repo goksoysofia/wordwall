@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import {
-  TARGET_SOUNDS,
   WORD_BANK,
   POSITION_LABELS,
   getWords,
@@ -74,7 +73,7 @@ export default function WordBankModal({ onAddWords, onClose }: WordBankModalProp
       />
 
       {/* Modal */}
-      <div className="relative flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+      <div className="relative flex max-h-[88dvh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
         {/* Header */}
         <div className="shrink-0 border-b border-[#F0EAFF] px-6 py-5">
           <div className="flex items-center justify-between">

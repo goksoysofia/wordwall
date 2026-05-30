@@ -75,8 +75,8 @@ export async function POST(request: NextRequest) {
       therapistEmail,
       therapistName,
       playerName: playerName || "Anonim Danışan",
-      activityTitle: activity.title,
-      activityType: activity.type,
+      activityTitle,
+      activityType,
       stats: {
         totalItems: stats.totalItems,
         correctCount: stats.correctCount,

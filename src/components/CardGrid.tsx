@@ -190,8 +190,8 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
         })}
       </div>
 
-      {/* Restart button */}
-      <div className="fixed bottom-5 left-0 right-0 z-30 flex justify-center px-4">
+      {/* Restart button — home indicator (safe-area) üstünde kalsın */}
+      <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-0 right-0 z-30 flex justify-center px-4">
         <button
           type="button"
           onClick={handleRestart}

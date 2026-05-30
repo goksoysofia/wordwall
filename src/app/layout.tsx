@@ -2,13 +2,41 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import CapacitorInit from "./capacitor-init";
+import SWRegister from "./sw-register";
 
 export const metadata: Metadata = {
-  title: "Etkinlik Oluşturucu",
-  description: "Dil ve konuşma terapisi etkinlikleri oluştur ve paylaş",
+  applicationName: "Wordwall",
+  title: {
+    default: "Wordwall — Etkinlik Oluşturucu",
+    template: "%s · Wordwall",
+  },
+  description: "Dil ve konuşma terapisi etkinlikleri oluştur, oyna ve paylaş.",
+  appleWebApp: {
+    capable: true,
+    title: "Wordwall",
+    statusBarStyle: "default",
+  },
+  // Next yalnızca modern `mobile-web-app-capable` üretiyor; eski iOS sürümleri
+  // standalone mod için apple-prefixli meta'yı okur — uyumluluk için ekliyoruz.
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
+  formatDetection: { telephone: false },
+  icons: {
+    icon: [
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
 };
 
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Erişilebilirlik için yakınlaştırmaya izin ver, ama oyun deneyiminde
+  // kazara aşırı yakınlaşmayı sınırla.
+  maximumScale: 5,
   viewportFit: "cover",
   themeColor: "#FFF8F0",
 };
@@ -34,6 +62,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <CapacitorInit />
+        <SWRegister />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

@@ -122,7 +122,7 @@ export default function MatchGame({ options, theme, showFeedback = true, onCompl
         }, 600);
       }
     },
-    [leftItems, rightItems]
+    [leftItems, rightItems, showFeedback]
   );
 
   useEffect(() => {

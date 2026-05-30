@@ -39,6 +39,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# test/agent artifacts
+.playwright-mcp/
+.superpowers/
+
 # Capacitor
 ios/App/Pods
 ios/App/App/public

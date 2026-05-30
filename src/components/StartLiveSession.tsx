@@ -68,7 +68,7 @@ export default function StartLiveSession({ activityId, activityTitle, onClose }:
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="animate-scale-in relative w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-2xl"
+        className="animate-scale-in relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-6 text-center shadow-2xl sm:p-8"
         style={{ border: "2px solid rgba(45, 27, 105, 0.08)" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -120,7 +120,7 @@ export default function StartLiveSession({ activityId, activityTitle, onClose }:
             {/* Session Code */}
             <div className="mb-6 rounded-2xl bg-[#F8F5FF] p-6" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
               <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#8B7BAD]">Seans Kodu</p>
-              <p className="font-heading text-5xl font-bold tracking-[0.2em] text-[#2D1B69]">{sessionCode}</p>
+              <p className="font-heading text-4xl font-bold tracking-[0.2em] text-[#2D1B69] sm:text-5xl">{sessionCode}</p>
             </div>
 
             {/* QR Placeholder */}

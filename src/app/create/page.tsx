@@ -209,7 +209,7 @@ export default function CreateActivityPage() {
       default:
         return false;
     }
-  }, [activityType, options, groups, title, displayMode]);
+  }, [activityType, options, groups, title, displayMode, quizQuestions]);
 
   function goNextFromContent() {
     if (!contentValid) return;

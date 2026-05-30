@@ -65,7 +65,7 @@ export default function MissingWord({ options, title, theme, showFeedback = true
         userAnswer: selectedOpt?.text || '',
       });
     }
-  }, [selected, answered, options, showFeedback]);
+  }, [selected, answered, options, showFeedback, title, correctOption?.text]);
 
   useEffect(() => {
     if (!answered || hasCompleted.current) return;

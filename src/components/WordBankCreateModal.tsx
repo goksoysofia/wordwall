@@ -6,13 +6,11 @@ import { v4 as uuidv4 } from "uuid";
 import { themes } from "@/lib/themes";
 import { authFetch } from "@/lib/auth-fetch";
 import {
-  TARGET_SOUNDS,
   WORD_BANK,
   POSITION_LABELS,
   getWords,
   getWordCounts,
   type SoundPosition,
-  type WordEntry,
 } from "@/lib/wordBank";
 import type { ActivityType } from "@/types/activity";
 
@@ -139,7 +137,7 @@ export default function WordBankCreateModal({ onClose }: WordBankCreateModalProp
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+      <div className="relative flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
         {/* Header */}
         <div className="shrink-0 border-b border-[#F0EAFF] px-6 py-5">
           <div className="flex items-center justify-between">

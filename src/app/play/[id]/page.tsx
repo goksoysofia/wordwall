@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -36,6 +36,9 @@ export default function PlayPage() {
   const [showLiveSession, setShowLiveSession] = useState(false);
   const [playerName, setPlayerName] = useState("");
   const [nameSubmitted, setNameSubmitted] = useState(false);
+  // Tekrar oyna: tam sayfa yenileme yerine oyunu remount ederek sıfırla
+  // (anında, yeniden fetch yok, girilen danışan adı korunur).
+  const [playCount, setPlayCount] = useState(0);
 
   useEffect(() => {
     if (!id || (Array.isArray(id) && id.length === 0)) {
@@ -260,10 +263,10 @@ export default function PlayPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
-        <h1 className="font-heading text-lg font-bold text-[#2D1B69] truncate mx-4">
+        <h1 className="font-heading text-base font-bold text-[#2D1B69] truncate mx-2 sm:text-lg sm:mx-4">
           {activity.title}
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={toggleFullscreen}
@@ -303,13 +306,14 @@ export default function PlayPage() {
             </svg>
             <span className="hidden sm:inline">Canlı</span>
           </button>
-          <div className="flex items-center gap-2 rounded-full bg-[#F8F5FF] px-3 py-1.5 text-sm font-bold text-[#8B7BAD]" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
+          <div className="hidden items-center gap-2 rounded-full bg-[#F8F5FF] px-3 py-1.5 text-sm font-bold text-[#8B7BAD] sm:flex" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
             <span>{theme.emoji}</span>
             <span className="hidden sm:inline">{theme.name}</span>
           </div>
         </div>
       </div>
 
+      <Fragment key={playCount}>
       {activity.type === "wheel" && (
         <SpinningWheel
           options={activity.options}
@@ -390,6 +394,7 @@ export default function PlayPage() {
           onComplete={handleComplete}
         />
       )}
+      </Fragment>
 
       <Celebration
         show={showCelebration}
@@ -405,7 +410,8 @@ export default function PlayPage() {
           activityId={activity.id}
           onReplay={() => {
             setGameStats(null);
-            window.location.reload();
+            setShowCelebration(false);
+            setPlayCount((c) => c + 1);
           }}
           onBack={() => router.push("/dashboard")}
         />

@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 
 function LoginContent() {
@@ -57,9 +58,9 @@ function LoginContent() {
           </button>
 
           <div className="mt-6 text-center">
-            <a href="/" className="text-sm font-medium text-[#8B7BAD] transition hover:text-[#2D1B69]">
+            <Link href="/" className="text-sm font-medium text-[#8B7BAD] transition hover:text-[#2D1B69]">
               ← Ana Sayfaya Dön
-            </a>
+            </Link>
           </div>
         </div>
       </div>

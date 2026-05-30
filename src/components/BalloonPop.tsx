@@ -62,14 +62,16 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
     return randomsRef.current.get(id)!;
   };
 
-  // Dynamic balloon size based on option count
+  // Seçenek sayısına göre balon boyutu — akışkan (clamp) ölçek:
+  // telefonda taşmadan küçülür, tablette aşırı küçük kalmadan büyür.
+  // Yazı boyutları SVG viewBox biriminde olduğu için balonla orantılı ölçeklenir.
   const balloonSize = useMemo(() => {
     const count = options.length;
-    if (count <= 2) return { width: 140, height: 175, fontSize: 18, fontSizeSmall: 14, truncate: 16, imgSize: "h-14 w-14" };
-    if (count <= 4) return { width: 120, height: 150, fontSize: 16, fontSizeSmall: 12, truncate: 14, imgSize: "h-12 w-12" };
-    if (count <= 6) return { width: 100, height: 125, fontSize: 14, fontSizeSmall: 11, truncate: 13, imgSize: "h-11 w-11" };
-    if (count <= 8) return { width: 90, height: 112, fontSize: 13, fontSizeSmall: 10, truncate: 12, imgSize: "h-10 w-10" };
-    return { width: 70, height: 88, fontSize: 10, fontSizeSmall: 8, truncate: 11, imgSize: "h-8 w-8" };
+    if (count <= 2) return { cssWidth: "clamp(112px, 30vw, 152px)", fontSize: 18, fontSizeSmall: 14, truncate: 16, imgSize: "h-14 w-14" };
+    if (count <= 4) return { cssWidth: "clamp(96px, 26vw, 128px)", fontSize: 16, fontSizeSmall: 12, truncate: 14, imgSize: "h-12 w-12" };
+    if (count <= 6) return { cssWidth: "clamp(80px, 22vw, 108px)", fontSize: 14, fontSizeSmall: 11, truncate: 13, imgSize: "h-11 w-11" };
+    if (count <= 8) return { cssWidth: "clamp(70px, 18vw, 96px)", fontSize: 13, fontSizeSmall: 10, truncate: 12, imgSize: "h-10 w-10" };
+    return { cssWidth: "clamp(56px, 15vw, 80px)", fontSize: 10, fontSizeSmall: 8, truncate: 11, imgSize: "h-8 w-8" };
   }, [options.length]);
 
   const balloons = useMemo(() => {
@@ -86,7 +88,8 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
           imageUrl: o.imageUrl,
           isCorrect: o.isCorrect === true,
           color: theme.cardColors[i % theme.cardColors.length],
-          x: ((i % cols) + 0.5) * (100 / cols),
+          // Kenar boşluğu bırak (10–90%) ki balonlar tamamen alan içinde kalsın.
+          x: 10 + ((i % cols) + 0.5) * (80 / cols),
           y: 15 + Math.floor(i / cols) * rowGap + rng.yOffset,
           delay: i * 0.15,
           floatRange: rng.floatRange,
@@ -279,8 +282,8 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
                 whileHover={{ scale: 1.15 }}
                 whileTap={{ scale: 0.9 }}
               >
-                {/* Balloon SVG */}
-                <svg width={balloonSize.width} height={balloonSize.height} viewBox="0 0 100 110" className="drop-shadow-lg">
+                {/* Balloon SVG — CSS clamp ile akışkan; yükseklik viewBox oranından gelir */}
+                <svg viewBox="0 0 100 110" className="drop-shadow-lg" style={{ width: balloonSize.cssWidth, height: "auto" }}>
                   {/* String */}
                   <path
                     d="M50,85 Q48,90 52,95 Q48,100 50,105"

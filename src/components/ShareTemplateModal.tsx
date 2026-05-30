@@ -68,7 +68,7 @@ export default function ShareTemplateModal({ activity, onClose, onSuccess }: Sha
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="animate-scale-in relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"
+        className="animate-scale-in relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
         style={{ border: "2px solid rgba(45, 27, 105, 0.08)" }}
         onClick={(e) => e.stopPropagation()}
       >

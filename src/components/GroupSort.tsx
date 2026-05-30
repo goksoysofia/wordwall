@@ -99,7 +99,7 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
         }, 600);
       }
     },
-    [remaining]
+    [remaining, showFeedback]
   );
 
   useEffect(() => {
@@ -133,8 +133,8 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
     groupCount >= 5
       ? "mb-2 rounded-xl px-2 py-1.5 text-xs font-extrabold sm:px-3 sm:py-2 sm:text-sm"
       : groupCount >= 4
-        ? "mb-3 rounded-2xl px-3 py-2 text-sm font-extrabold sm:text-base"
-        : "mb-4 rounded-2xl px-6 py-2.5 text-base font-extrabold sm:text-lg";
+        ? "mb-3 rounded-2xl px-2 py-2 text-sm font-extrabold sm:px-3 sm:text-base"
+        : "mb-4 rounded-2xl px-2 py-2.5 text-base font-extrabold sm:px-6 sm:text-lg";
 
   const resetGame = () => {
     setRemaining(shuffle(options.filter((o) => o.group)));
@@ -247,8 +247,9 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
                     style={
                       imageFit === "contain"
                         ? {
-                            minHeight: "min(28vh, 220px)",
-                            maxHeight: "min(68vh, 440px)",
+                            // Telefonda grupların ekran altına itilmemesi için daha kısa.
+                            minHeight: "min(22vh, 180px)",
+                            maxHeight: "min(48vh, 360px)",
                           }
                         : undefined
                     }
@@ -259,7 +260,7 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
                       alt=""
                       className={
                         imageFit === "contain"
-                          ? "max-h-[min(62vh,26rem)] w-full max-w-full object-contain object-center p-1 sm:max-h-[min(65vh,28rem)]"
+                          ? "max-h-[min(44vh,20rem)] w-full max-w-full object-contain object-center p-1 sm:max-h-[min(62vh,26rem)]"
                           : "h-full w-full object-cover object-center"
                       }
                     />
@@ -320,7 +321,7 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="flex flex-col items-center overflow-hidden rounded-xl bg-white shadow-sm"
-                      style={{ border: `2px solid ${color}30`, width: item.imageUrl ? 90 : undefined }}
+                      style={{ border: `2px solid ${color}30`, width: item.imageUrl ? "100%" : undefined, maxWidth: item.imageUrl ? 90 : undefined }}
                     >
                       {item.imageUrl ? (
                         <>

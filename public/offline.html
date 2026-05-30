@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Çevrimdışı · Wordwall</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; }
+      body {
+        font-family: "Nunito", system-ui, -apple-system, sans-serif;
+        background: linear-gradient(135deg, #FFF8F0, #FFF3E4 60%, #FFE8F5);
+        color: #2D1B69;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: max(env(safe-area-inset-top), 1.5rem) 1.5rem
+          max(env(safe-area-inset-bottom), 1.5rem);
+      }
+      .box { max-width: 22rem; }
+      .emoji { font-size: 4rem; margin-bottom: 1rem; }
+      h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+      p { color: #8B7BAD; font-weight: 600; line-height: 1.5; margin-bottom: 1.75rem; }
+      button {
+        background: linear-gradient(135deg, #FF6B9D, #FF8A50);
+        color: #fff;
+        border: none;
+        border-radius: 1rem;
+        padding: 0.9rem 2rem;
+        font-family: inherit;
+        font-size: 1.05rem;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 0 #D4456E, 0 6px 20px rgba(255, 107, 157, 0.3);
+        min-height: 48px;
+      }
+      button:active { transform: translateY(2px); box-shadow: 0 2px 0 #D4456E; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <div class="emoji">📡</div>
+      <h1>İnternet bağlantısı yok</h1>
+      <p>Wordwall'a bağlanmak için internet gerekiyor. Bağlantını kontrol edip tekrar dene.</p>
+      <button onclick="location.reload()">Tekrar Dene</button>
+    </div>
+  </body>
+</html>

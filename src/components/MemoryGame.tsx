@@ -52,6 +52,16 @@ export default function MemoryGame({ options, theme, onComplete }: MemoryGamePro
   const [matched, setMatched] = useState<Set<string>>(new Set());
   const [checking, setChecking] = useState(false);
   const [moves, setMoves] = useState(0);
+  const [isNarrow, setIsNarrow] = useState(false);
+
+  // Dar ekranlarda (telefon) sütun sayısını azaltarak kartları dokunulabilir tut.
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 480px)");
+    const update = () => setIsNarrow(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   const handleFlip = useCallback(
     (uid: string) => {
@@ -118,7 +128,17 @@ export default function MemoryGame({ options, theme, onComplete }: MemoryGamePro
     lockRef.current = false;
   };
 
-  const cols = cards.length <= 8 ? 3 : cards.length <= 16 ? 4 : 5;
+  const cols = isNarrow
+    ? cards.length <= 6
+      ? 2
+      : cards.length <= 12
+        ? 3
+        : 4
+    : cards.length <= 8
+      ? 3
+      : cards.length <= 16
+        ? 4
+        : 5;
 
   return (
     <div className="relative flex flex-col items-center gap-6 px-3 py-6 md:px-6" style={{ backgroundColor: theme.backgroundColor }}>

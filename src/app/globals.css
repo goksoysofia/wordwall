@@ -350,6 +350,53 @@ input:focus, select:focus, textarea:focus {
   background: linear-gradient(180deg, var(--candy-orange), var(--candy-pink));
 }
 
+/* ====== MOBILE / RESPONSIVE FOUNDATION ====== */
+
+/* Yatay taşmalara karşı güvenlik ağı — clip, sticky/scroll'u bozmaz. */
+body {
+  overflow-x: clip;
+}
+
+/* iOS Safari, font-size < 16px olan bir input'a odaklanınca otomatik zoom
+   yapar. Telefon genişliklerinde tüm form kontrollerini en az 16px'e sabitle. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* Güvenli alan (notch / home indicator / dinamik ada) yardımcıları */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+}
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top), 0px);
+}
+
+/* Mobil tarayıcı adres çubuğunu hesaba katan tam ekran yüksekliği.
+   dvh desteklemeyen tarayıcılarda vh'e düşer. */
+.min-h-dvh-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Tüm `min-h-screen` (100vh) kullanımlarını mobilde görünür alanı baz alan
+   dvh'ye yükselt — adres çubuğu yüzünden taşma/yanlış ortalanmayı önler.
+   Katmansız kural olduğu için Tailwind utility katmanını geçer. */
+@supports (min-height: 100dvh) {
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+}
+
 /* ====== PATTERN BACKGROUND ====== */
 
 .bg-dots-pattern {

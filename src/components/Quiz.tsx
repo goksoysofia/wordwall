@@ -83,6 +83,8 @@ export default function Quiz({
   const hasCompletedRef = useRef(false);
   const wrongItemsRef = useRef<WrongItem[]>([]);
   const scoreRef = useRef({ correct: 0, wrong: 0 });
+  // Hangi soruların skoru kaydedildiği — her soru yalnızca bir kez (ilk cevapta) sayılır.
+  const scoredRef = useRef<Set<string>>(new Set());
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -103,21 +105,29 @@ export default function Quiz({
       const correct = answer?.isCorrect === true;
       setIsCorrect(correct);
 
+      // Skoru ve hatalı öğeyi soru başına yalnızca İLK cevapta kaydet; "Tekrar Dene"
+      // ile yeniden denemeler skoru şişirmesin ve aynı soruyu rapora birden çok kez
+      // yazmasın. Böylece correct + wrong = toplam soru sayısı olur.
+      if (!scoredRef.current.has(currentQ.id)) {
+        scoredRef.current.add(currentQ.id);
+        if (correct) {
+          scoreRef.current.correct += 1;
+        } else {
+          scoreRef.current.wrong += 1;
+          const correctAns = currentQ.answers.find((a) => a.isCorrect);
+          wrongItemsRef.current.push({
+            text: currentQ.question,
+            correctAnswer: correctAns?.text || "",
+            userAnswer: answer?.text || "",
+          });
+        }
+      }
+
       if (correct) {
         if (showFeedback) playCorrectSound();
-        scoreRef.current.correct += 1;
       } else {
         if (showFeedback) playWrongSound();
-        scoreRef.current.wrong += 1;
         setAttempts((a) => a + 1);
-
-        const selectedText = answer?.text || "";
-        const correctAns = currentQ.answers.find((a) => a.isCorrect);
-        wrongItemsRef.current.push({
-          text: currentQ.question,
-          correctAnswer: correctAns?.text || "",
-          userAnswer: selectedText,
-        });
       }
     },
     [answered, transitioning, currentQ, showFeedback]

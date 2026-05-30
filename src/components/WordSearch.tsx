@@ -206,6 +206,23 @@ export default function WordSearch({ options, title, theme, onComplete }: WordSe
   // hücre font boyutu ızgara boyutuna göre
   const fontSize = size >= 12 ? "clamp(11px, 3vw, 18px)" : size >= 10 ? "clamp(13px, 3.6vw, 22px)" : "clamp(15px, 4.4vw, 26px)";
 
+  // Geçerli kelime yoksa (ör. tüm öğeler tek harf) çözülebilir bir ızgara üretilemez.
+  // Boş/çözülemez ızgarada takılı kalmak yerine bilgilendirme göster.
+  if (words.length === 0) {
+    return (
+      <div className="relative flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 py-10 text-center" style={{ backgroundColor: theme.backgroundColor }}>
+        <ThemedBackground decorEmojis={theme.decorEmojis} backgroundColor={theme.backgroundColor} />
+        <div className="z-10 max-w-md rounded-3xl bg-white px-6 py-8 shadow-xl" style={{ border: "3px solid rgba(45, 27, 105, 0.08)" }}>
+          <div className="mb-3 text-5xl">🔎</div>
+          <p className="font-heading text-lg font-bold text-[#2D1B69]">Bu kelime avı oynanamıyor</p>
+          <p className="mt-2 text-sm font-semibold text-[#8B7BAD]">
+            En az 2 harfli kelimeler gerekir. Lütfen etkinliği düzenleyip uygun kelimeler ekleyin.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex flex-col items-center gap-5 px-3 py-6 md:px-6" style={{ backgroundColor: theme.backgroundColor }}>
       <ThemedBackground decorEmojis={theme.decorEmojis} backgroundColor={theme.backgroundColor} />

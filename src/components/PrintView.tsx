@@ -74,32 +74,57 @@ export default function PrintView({ activity, onClose }: PrintViewProps) {
         );
       }
 
-      case "quiz":
+      case "quiz": {
+        const letters = ["A", "B", "C", "D", "E", "F", "G", "H"];
+        // Yeni format: her option bir soru + iç içe cevaplar. Eski format: title soru, options cevaplar.
+        const isMulti = options.length > 0 && !!options[0].question && Array.isArray(options[0].answers);
+        if (isMulti) {
+          return (
+            <div className="worksheet-section">
+              {options.map((q, qi) => (
+                <div key={q.id} className="quiz-block">
+                  <div className="quiz-question">
+                    <strong>{qi + 1}.</strong> {q.question}
+                  </div>
+                  {(q.answers ?? []).map((ans, ai) => (
+                    <div key={ans.id} className="quiz-option">
+                      <span className="quiz-circle">○</span>
+                      <span className="quiz-label">{letters[ai] ?? String(ai + 1)})</span>
+                      <span className="quiz-text">{ans.text || ""}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          );
+        }
         return (
           <div className="worksheet-section">
             <div className="quiz-question">
               <strong>Soru:</strong> {title}
             </div>
-            {options.map((option, index) => {
-              const letters = ["A", "B", "C", "D", "E", "F"];
-              return (
-                <div key={option.id} className="quiz-option">
-                  <span className="quiz-circle">○</span>
-                  <span className="quiz-label">{letters[index] ?? String(index + 1)})</span>
-                  <span className="quiz-text">{option.text || ""}</span>
-                </div>
-              );
-            })}
+            {options.map((option, index) => (
+              <div key={option.id} className="quiz-option">
+                <span className="quiz-circle">○</span>
+                <span className="quiz-label">{letters[index] ?? String(index + 1)})</span>
+                <span className="quiz-text">{option.text || ""}</span>
+              </div>
+            ))}
           </div>
         );
+      }
 
       case "missing-word": {
-        const sentence = options.find((o) => o.isCorrect)?.text ?? options[0]?.text ?? "";
+        // Cümle aktivitenin title'ında ___ ile saklanır; options kelime seçenekleridir.
+        const sentence =
+          (title && title.includes("_") ? title.replace(/_+/g, "___") : title) ||
+          options.find((o) => o.isCorrect)?.text ||
+          "";
         const wordBank = options.map((o) => o.text).filter(Boolean).join(" | ");
         return (
           <div className="worksheet-section">
             <div className="missing-word-sentence">
-              <strong>Cümle:</strong> {sentence.replace(/_+/, "___")}
+              <strong>Cümle:</strong> {sentence}
             </div>
             <div className="missing-word-bank">
               <strong>Kelimeler:</strong> {wordBank}
@@ -434,6 +459,17 @@ export default function PrintView({ activity, onClose }: PrintViewProps) {
           font-family: sans-serif;
           padding-top: 12px;
           border-top: 1px solid #e5e7eb;
+        }
+
+        .quiz-block {
+          margin-bottom: 24px;
+          padding-bottom: 8px;
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+
+        .quiz-block .quiz-question {
+          margin-bottom: 10px;
         }
 
         .quiz-question {

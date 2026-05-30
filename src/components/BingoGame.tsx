@@ -91,16 +91,21 @@ export default function BingoGame({ options, title, theme, showFeedback = true, 
     hasCompleted.current = true;
     setWon(true);
     playCelebrationSound();
+    // Tombala bir satır/sütun/çapraz tamamlanınca kazanılır (tüm tahta değil).
+    // Kazanmak başarıdır: çağrılan her öğe doğru bulundu. İşaretlenen hücre sayısını
+    // hem "toplam" hem "doğru" alarak raporda %100 başarı göster; yanlış dokunuşlar
+    // wrongCount'ta ayrıca tutulur.
+    const found = daubed.size + 1; // kazandıran son hücre dahil
     const stats: GameStats = {
-      totalItems: board.length,
-      correctCount: daubed.size + 1,
+      totalItems: found,
+      correctCount: found,
       wrongCount: wrongRef.current,
       timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
       completedAt: new Date().toISOString(),
       wrongItems: wrongItemsRef.current,
     };
     setTimeout(() => onComplete(stats), 1400);
-  }, [board.length, daubed.size, onComplete]);
+  }, [daubed.size, onComplete]);
 
   const handleCell = useCallback(
     (cell: BingoOption) => {

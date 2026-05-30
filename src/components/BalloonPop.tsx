@@ -156,7 +156,11 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
         setShowReadComplete(true);
       }
     } else {
-      if (score.correct >= correctCount && correctCount > 0 && !hasCompletedRef.current) {
+      // Normalde tüm doğru balonlar patlatılınca biter. Hiç doğru balon yoksa
+      // (bozuk/eksik veri) tüm balonlar patlatıldığında yine de tamamla — kilitlenmeyi önler.
+      const allPopped = balloons.length > 0 && popped.size >= balloons.length;
+      const correctDone = correctCount > 0 && score.correct >= correctCount;
+      if ((correctDone || allPopped) && !hasCompletedRef.current) {
         hasCompletedRef.current = true;
         setTimeout(() => {
           const s = scoreRef.current;

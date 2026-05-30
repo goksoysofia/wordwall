@@ -303,8 +303,17 @@ export function playFlipSound() {
   void hapticLight();
 }
 
+// Oyun tamamlandığında hem oyunun kendisi hem de Celebration modalı bu sesi
+// kısa aralıkla iki kez tetikleyebiliyor. Aynı kutlamanın iki kez çalmaması için
+// son çalınma zamanını izleyip 1.5sn içindeki tekrar çağrıları yok say.
+let lastCelebrationAt = -Infinity;
+
 /** Celebration — full orchestral burst with ascending scale, fanfare, and fireworks */
 export function playCelebrationSound() {
+  const now = typeof performance !== "undefined" ? performance.now() : 0;
+  if (now - lastCelebrationAt < 1500) return;
+  lastCelebrationAt = now;
+
   // Phase 1: ascending pentatonic scale
   const scale = [523, 587, 659, 784, 880, 1047]; // C major pentatonic-ish
   scale.forEach((f, i) => {

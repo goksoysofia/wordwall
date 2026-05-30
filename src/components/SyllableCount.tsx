@@ -55,8 +55,10 @@ export default function SyllableCount({ options, title, theme, showFeedback = tr
   const total = deck.length;
 
   const maxButtons = useMemo(() => {
+    // En az 3 buton; en uzun kelimenin hece sayısı kadar buton (doğru cevap daima
+    // ulaşılabilir olsun). Üst sınır yok — butonlar gerekirse alt satıra sarar.
     const max = deck.reduce((m, o) => Math.max(m, syllableCount(o.text!)), 1);
-    return Math.min(8, Math.max(3, max));
+    return Math.max(3, max);
   }, [deck]);
 
   const [index, setIndex] = useState(0);

@@ -1,38 +1,38 @@
 "use client";
 
-import { isNative } from './platform';
-
-/** Doğru cevap haptic'i — orta şiddetli titreşim */
-export async function hapticCorrect(): Promise<void> {
-  if (!isNative()) return;
-  const { Haptics, NotificationType } = await import('@capacitor/haptics');
-  await Haptics.notification({ type: NotificationType.Success });
+// Haptic geri bildirim — Web Vibration API tabanlı (Capacitor'sız).
+// Android Chrome ve kurulu PWA destekler; iOS Safari desteklemez ve
+// sessizce yok sayılır. Bir kullanıcı etkileşimi içinde çağrılmalıdır.
+function vibrate(pattern: number | number[]): void {
+  if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
+  try {
+    navigator.vibrate(pattern);
+  } catch {
+    // bazı tarayıcılar izin/parametre nedeniyle atabilir — yok say
+  }
 }
 
-/** Yanlış cevap haptic'i — hata titreşimi */
-export async function hapticWrong(): Promise<void> {
-  if (!isNative()) return;
-  const { Haptics, NotificationType } = await import('@capacitor/haptics');
-  await Haptics.notification({ type: NotificationType.Error });
+/** Doğru cevap haptic'i */
+export function hapticCorrect(): void {
+  vibrate([18, 40, 28]);
+}
+
+/** Yanlış cevap haptic'i */
+export function hapticWrong(): void {
+  vibrate([55, 30, 55]);
 }
 
 /** Hafif dokunma — buton tıklama, kart çevirme */
-export async function hapticLight(): Promise<void> {
-  if (!isNative()) return;
-  const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
-  await Haptics.impact({ style: ImpactStyle.Light });
+export function hapticLight(): void {
+  vibrate(10);
 }
 
 /** Orta dokunma — çark tick, eleman yerleştirme */
-export async function hapticMedium(): Promise<void> {
-  if (!isNative()) return;
-  const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
-  await Haptics.impact({ style: ImpactStyle.Medium });
+export function hapticMedium(): void {
+  vibrate(22);
 }
 
-/** Kutlama haptic'i — ağır titreşim */
-export async function hapticHeavy(): Promise<void> {
-  if (!isNative()) return;
-  const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
-  await Haptics.impact({ style: ImpactStyle.Heavy });
+/** Kutlama haptic'i — daha uzun titreşim */
+export function hapticHeavy(): void {
+  vibrate([40, 30, 60]);
 }

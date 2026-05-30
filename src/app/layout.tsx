@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
-import CapacitorInit from "./capacitor-init";
 import SWRegister from "./sw-register";
 
 export const metadata: Metadata = {
@@ -61,7 +60,6 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <CapacitorInit />
         <SWRegister />
         <AuthProvider>{children}</AuthProvider>
       </body>

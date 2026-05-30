@@ -6,7 +6,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import type { Activity } from "@/types/activity";
 import { getTheme } from "@/lib/themes";
-import { isNative } from "@/lib/platform";
 import SpinningWheel from "@/components/SpinningWheel";
 import CardGrid from "@/components/CardGrid";
 import CardStack from "@/components/CardStack";
@@ -106,33 +105,6 @@ export default function PlayPage() {
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
-
-  // Native: oyun sırasında ekran yönünü kilitle ve status bar'ı gizle
-  useEffect(() => {
-    if (!isNative() || !activity) return;
-
-    let unlockOrientation: (() => void) | undefined;
-    let showStatusBar: (() => void) | undefined;
-
-    (async () => {
-      const { ScreenOrientation } = await import('@capacitor/screen-orientation');
-      await ScreenOrientation.lock({ orientation: 'portrait' }).catch(() => {});
-      unlockOrientation = () => {
-        ScreenOrientation.unlock().catch(() => {});
-      };
-
-      const { StatusBar } = await import('@capacitor/status-bar');
-      await StatusBar.hide().catch(() => {});
-      showStatusBar = () => {
-        StatusBar.show().catch(() => {});
-      };
-    })();
-
-    return () => {
-      unlockOrientation?.();
-      showStatusBar?.();
-    };
-  }, [activity]);
 
   if (loading) {
     return (

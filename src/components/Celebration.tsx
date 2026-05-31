@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playCelebrationSound } from "@/lib/sounds";
+import { seededRandom } from "@/lib/shuffle";
 
 interface Balloon {
   id: number;
@@ -10,6 +11,7 @@ interface Balloon {
   color: string;
   delay: number;
   size: number;
+  duration: number;
 }
 
 interface Star {
@@ -23,6 +25,33 @@ interface Star {
 
 const BALLOON_COLORS = ["#FF6B9D", "#FFD93D", "#4D96FF", "#6BCB77", "#FF8A50", "#9B59B6", "#26D0CE", "#FF5252"];
 
+// Konfeti yapılandırması modül yüklenirken deterministik olarak bir kez üretilir.
+// Her kutlamada aynı düzen kullanılır; düşme animasyonu zaten AnimatePresence ile
+// yeniden oynatılır. Böylece render saf kalır ve effect içinde setState gerekmez.
+const BALLOONS: Balloon[] = (() => {
+  const rng = seededRandom(0x8a17);
+  return Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    x: rng() * 100,
+    color: BALLOON_COLORS[i % BALLOON_COLORS.length],
+    delay: rng() * 1.5,
+    size: 32 + rng() * 28,
+    duration: 3 + rng() * 2,
+  }));
+})();
+
+const STARS: Star[] = (() => {
+  const rng = seededRandom(0x2c9f);
+  return Array.from({ length: 12 }, (_, i) => ({
+    id: i,
+    x: 10 + rng() * 80,
+    y: 10 + rng() * 80,
+    size: 16 + rng() * 24,
+    delay: rng() * 2,
+    rotation: rng() * 360,
+  }));
+})();
+
 export default function Celebration({
   show,
   text = "Aferin! 🎉",
@@ -32,31 +61,8 @@ export default function Celebration({
   text?: string;
   onClose: () => void;
 }) {
-  const [balloons, setBalloons] = useState<Balloon[]>([]);
-  const [stars, setStars] = useState<Star[]>([]);
-
   useEffect(() => {
-    if (show) {
-      playCelebrationSound();
-      const newBalloons: Balloon[] = Array.from({ length: 20 }, (_, i) => ({
-        id: i,
-        x: Math.random() * 100,
-        color: BALLOON_COLORS[i % BALLOON_COLORS.length],
-        delay: Math.random() * 1.5,
-        size: 32 + Math.random() * 28,
-      }));
-      setBalloons(newBalloons);
-
-      const newStars: Star[] = Array.from({ length: 12 }, (_, i) => ({
-        id: i,
-        x: 10 + Math.random() * 80,
-        y: 10 + Math.random() * 80,
-        size: 16 + Math.random() * 24,
-        delay: Math.random() * 2,
-        rotation: Math.random() * 360,
-      }));
-      setStars(newStars);
-    }
+    if (show) playCelebrationSound();
   }, [show]);
 
   return (
@@ -72,13 +78,13 @@ export default function Celebration({
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
 
           {/* Balloons */}
-          {balloons.map((balloon) => (
+          {BALLOONS.map((balloon) => (
             <motion.div
               key={balloon.id}
               initial={{ y: "100vh", x: `${balloon.x}vw` }}
               animate={{ y: "-20vh" }}
               transition={{
-                duration: 3 + Math.random() * 2,
+                duration: balloon.duration,
                 delay: balloon.delay,
                 ease: "easeOut",
               }}
@@ -127,7 +133,7 @@ export default function Celebration({
           ))}
 
           {/* Sparkle stars */}
-          {stars.map((star) => (
+          {STARS.map((star) => (
             <motion.div
               key={`star-${star.id}`}
               initial={{ scale: 0, opacity: 0 }}

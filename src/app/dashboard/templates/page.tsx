@@ -50,8 +50,6 @@ export default function TemplatesPage() {
   }, [authLoading, user, router]);
 
   const loadTemplates = useCallback(async () => {
-    setError(null);
-    setLoading(true);
     try {
       const params = new URLSearchParams();
       if (activeCategory) params.set("category", activeCategory);
@@ -65,16 +63,24 @@ export default function TemplatesPage() {
         setError(data.error || "Şablonlar yüklenemedi.");
         return;
       }
+      // Filtre değişiminde eski liste, yenisi gelene dek görünür kalır
+      // (stale-while-revalidate); hata yalnızca başarıdan sonra temizlenir.
+      setError(null);
       setTemplates(Array.isArray(data) ? data : []);
     } catch {
       setError("Bağlantı hatası.");
     } finally {
       setLoading(false);
     }
-  }, [activeCategory, searchQuery, sort, user?.id]);
+  }, [activeCategory, searchQuery, sort, user]);
 
   useEffect(() => {
-    if (user) void loadTemplates();
+    if (!user) return;
+    // loadTemplates, setState'lerini yalnızca `await` sonrasında yapar (senkron
+    // render zinciri oluşmaz) ve aynı yükleyici "Yeniden Dene"de de kullanılır.
+    // Lint kuralı bu dolaylı-async durumu izleyemediğinden bilinçli susturulur.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadTemplates();
   }, [user, loadTemplates]);
 
   const handleUse = async (templateId: string) => {

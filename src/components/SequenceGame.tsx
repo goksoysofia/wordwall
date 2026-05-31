@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playCorrectSound, playWrongSound, playCelebrationSound, playCardOpenSound } from "@/lib/sounds";
-import type { GameStats, WrongItem } from "@/types/game";
+import { shuffle } from "@/lib/shuffle";
+import { useGameStats } from "@/hooks/useGameStats";
+import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 interface SeqOption {
@@ -26,20 +28,8 @@ export interface SequenceGameProps {
   onComplete: (stats: GameStats) => void;
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 export default function SequenceGame({ options, title, theme, showFeedback = true, onComplete }: SequenceGameProps) {
-  const startTime = useRef(Date.now());
-  const hasCompleted = useRef(false);
-  const wrongRef = useRef(0);
-  const wrongItemsRef = useRef<WrongItem[]>([]);
+  const { wrongCount, isCompleted, recordWrong, markCompleted, buildStats, reset } = useGameStats();
 
   const total = options.length;
   const [pool, setPool] = useState<SeqOption[]>(() => shuffle(options));
@@ -57,7 +47,7 @@ export default function SequenceGame({ options, title, theme, showFeedback = tru
 
   const handlePoolTap = useCallback(
     (item: SeqOption) => {
-      if (hasCompleted.current) return;
+      if (isCompleted) return;
       const expectedIndex = placed.length;
 
       if (showFeedback) {
@@ -67,8 +57,7 @@ export default function SequenceGame({ options, title, theme, showFeedback = tru
           setPool((p) => p.filter((o) => o.id !== item.id));
         } else {
           playWrongSound();
-          wrongRef.current += 1;
-          wrongItemsRef.current.push({
+          recordWrong({
             text: item.text || "Öğe",
             correctAnswer: `${expectedIndex + 1}. sıraya ait değil`,
             userAnswer: `${expectedIndex + 1}. sıraya konmaya çalışıldı`,
@@ -82,59 +71,58 @@ export default function SequenceGame({ options, title, theme, showFeedback = tru
         setPool((p) => p.filter((o) => o.id !== item.id));
       }
     },
-    [placed.length, showFeedback, correctOrderIds]
+    [placed.length, showFeedback, correctOrderIds, isCompleted, recordWrong]
   );
 
   // Geri bildirim kapalıyken yerleştirileni geri al
   const handlePlacedTap = useCallback(
     (item: SeqOption) => {
-      if (showFeedback || hasCompleted.current) return;
+      if (showFeedback || isCompleted) return;
       setPlaced((p) => p.filter((o) => o.id !== item.id));
       setPool((p) => [...p, item]);
     },
-    [showFeedback]
+    [showFeedback, isCompleted]
   );
 
   useEffect(() => {
-    if (pool.length === 0 && total > 0 && !hasCompleted.current) {
-      hasCompleted.current = true;
-      const correctCount = placed.reduce(
-        (acc, item, idx) => acc + (correctOrderIds[idx] === item.id ? 1 : 0),
-        0
-      );
-      // Geri bildirim kapalıysa yanlış yerleşenleri kayda geç
-      if (!showFeedback) {
-        placed.forEach((item, idx) => {
-          if (correctOrderIds[idx] !== item.id) {
-            wrongItemsRef.current.push({
-              text: item.text || "Öğe",
-              correctAnswer: `Doğru sıra: ${correctOrderIds.indexOf(item.id) + 1}`,
-              userAnswer: `Konulan sıra: ${idx + 1}`,
-            });
-          }
+    if (pool.length === 0 && total > 0 && markCompleted()) {
+      playCelebrationSound();
+      let stats: GameStats;
+      if (showFeedback) {
+        // Geri bildirim modunda yalnızca doğru sıraya konabildiğinden tümü
+        // doğrudur; yanlış denemeler oynanış sırasında recordWrong ile sayıldı.
+        stats = buildStats({ totalItems: total, correctCount: total });
+      } else {
+        // Geri bildirim kapalı: nihai diziliş tamamlanma anında değerlendirilir.
+        const correctCount = placed.reduce(
+          (acc, item, idx) => acc + (correctOrderIds[idx] === item.id ? 1 : 0),
+          0
+        );
+        const misplaced = placed.flatMap((item, idx) =>
+          correctOrderIds[idx] !== item.id
+            ? [{
+                text: item.text || "Öğe",
+                correctAnswer: `Doğru sıra: ${correctOrderIds.indexOf(item.id) + 1}`,
+                userAnswer: `Konulan sıra: ${idx + 1}`,
+              }]
+            : []
+        );
+        stats = buildStats({
+          totalItems: total,
+          correctCount,
+          wrongCount: total - correctCount,
+          wrongItems: misplaced,
         });
       }
-      playCelebrationSound();
-      const stats: GameStats = {
-        totalItems: total,
-        correctCount: showFeedback ? total : correctCount,
-        wrongCount: wrongRef.current + (showFeedback ? 0 : total - correctCount),
-        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-        completedAt: new Date().toISOString(),
-        wrongItems: wrongItemsRef.current,
-      };
       setTimeout(() => onComplete(stats), 800);
     }
-  }, [pool.length, placed, total, correctOrderIds, showFeedback, onComplete]);
+  }, [pool.length, placed, total, correctOrderIds, showFeedback, onComplete, markCompleted, buildStats]);
 
   const resetGame = () => {
     setPool(shuffle(options));
     setPlaced([]);
     setShakeId(null);
-    wrongRef.current = 0;
-    wrongItemsRef.current = [];
-    hasCompleted.current = false;
-    startTime.current = Date.now();
+    reset();
   };
 
   const renderCard = (item: SeqOption, variant: "pool" | "placed", index?: number) => (
@@ -169,10 +157,10 @@ export default function SequenceGame({ options, title, theme, showFeedback = tru
           <span className="font-heading text-lg font-bold text-[#2D1B69]">{placed.length}</span>
           <span className="text-xs font-bold text-[#8B7BAD]">/ {total}</span>
         </div>
-        {showFeedback && wrongRef.current > 0 && (
+        {showFeedback && wrongCount > 0 && (
           <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
             <span className="text-lg">❌</span>
-            <span className="font-heading text-lg font-bold text-rose-500">{wrongRef.current}</span>
+            <span className="font-heading text-lg font-bold text-rose-500">{wrongCount}</span>
           </div>
         )}
       </div>

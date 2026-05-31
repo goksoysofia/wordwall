@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playCorrectSound, playWrongSound } from "@/lib/sounds";
-import type { GameStats, WrongItem } from "@/types/game";
+import { shuffle } from "@/lib/shuffle";
+import { useGameStats } from "@/hooks/useGameStats";
+import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 export interface GroupSortProps {
@@ -19,20 +21,8 @@ export interface GroupSortProps {
   onComplete: (stats: GameStats) => void;
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 export default function GroupSort({ options, theme, showFeedback = true, onComplete }: GroupSortProps) {
-  const startTime = useRef(Date.now());
-  const scoreRef = useRef({ correct: 0, wrong: 0 });
-  const hasCompleted = useRef(false);
-  const wrongItemsRef = useRef<WrongItem[]>([]);
+  const { wrongCount, recordCorrect, recordWrong, markCompleted, buildStats, reset } = useGameStats();
   const groups = useMemo(() => {
     const set = new Set<string>();
     options.forEach((o) => { if (o.group) set.add(o.group); });
@@ -51,7 +41,6 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
     return init;
   });
   const [feedback, setFeedback] = useState<{ itemId: string; correct: boolean } | null>(null);
-  const [score, setScore] = useState({ correct: 0, wrong: 0 });
   /** Görsel: tam sığdır (varsayılan) vs alanı doldur (kırpabilir). */
   const [imageFit, setImageFit] = useState<"contain" | "cover">("contain");
 
@@ -66,11 +55,7 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
       if (item.group === targetGroup) {
         if (showFeedback) playCorrectSound();
         setFeedback(showFeedback ? { itemId, correct: true } : null);
-        setScore((s) => {
-          const next = { ...s, correct: s.correct + 1 };
-          scoreRef.current = next;
-          return next;
-        });
+        recordCorrect();
         setTimeout(() => {
           setRemaining((prev) => prev.filter((o) => o.id !== itemId));
           setSorted((prev) => ({
@@ -82,41 +67,25 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
       } else {
         if (showFeedback) playWrongSound();
         setFeedback(showFeedback ? { itemId, correct: false } : null);
-        setScore((s) => {
-          const next = { ...s, wrong: s.wrong + 1 };
-          scoreRef.current = next;
-          return next;
-        });
-
-        wrongItemsRef.current.push({
+        recordWrong({
           text: item.text || 'Öğe',
           correctAnswer: item.group || 'Doğru Grup Belirtilmemiş',
           userAnswer: targetGroup,
         });
-
         setTimeout(() => {
           setFeedback(null);
         }, 600);
       }
     },
-    [remaining, showFeedback]
+    [remaining, showFeedback, recordCorrect, recordWrong]
   );
 
   useEffect(() => {
-    if (remaining.length === 0 && options.length > 0 && !hasCompleted.current) {
-      hasCompleted.current = true;
-      const s = scoreRef.current;
-      const stats: GameStats = {
-        totalItems: options.length,
-        correctCount: s.correct,
-        wrongCount: s.wrong,
-        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-        completedAt: new Date().toISOString(),
-        wrongItems: wrongItemsRef.current,
-      };
+    if (remaining.length === 0 && options.length > 0 && markCompleted()) {
+      const stats = buildStats({ totalItems: options.length });
       setTimeout(() => onComplete(stats), 600);
     }
-  }, [remaining.length, options.length, onComplete]);
+  }, [remaining.length, options.length, onComplete, markCompleted, buildStats]);
 
   const handleGroupClick = (group: string) => {
     const id = remaining[0]?.id;
@@ -142,11 +111,7 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
     groups.forEach((g) => { init[g] = []; });
     setSorted(init);
     setFeedback(null);
-    setScore({ correct: 0, wrong: 0 });
-    scoreRef.current = { correct: 0, wrong: 0 };
-    wrongItemsRef.current = [];
-    startTime.current = Date.now();
-    hasCompleted.current = false;
+    reset();
   };
 
   return (
@@ -160,10 +125,10 @@ export default function GroupSort({ options, theme, showFeedback = true, onCompl
             {options.length - remaining.length}/{options.length}
           </span>
         </div>
-        {showFeedback && score.wrong > 0 && (
+        {showFeedback && wrongCount > 0 && (
           <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
             <span className="text-lg">❌</span>
-            <span className="font-heading text-lg font-bold text-rose-500">{score.wrong}</span>
+            <span className="font-heading text-lg font-bold text-rose-500">{wrongCount}</span>
           </div>
         )}
       </div>

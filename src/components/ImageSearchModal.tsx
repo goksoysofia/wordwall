@@ -25,13 +25,23 @@ export default function ImageSearchModal({ open, onClose, onSelect }: ImageSearc
   const [searched, setSearched] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  // Modal her açıldığında önceki aramayı render sırasında temizle (React'in
+  // "girdi değişince state'i ayarla" kalıbı).
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setQuery("");
       setPhotos([]);
       setSearched(false);
-      setTimeout(() => inputRef.current?.focus(), 100);
     }
+  }
+
+  // Açılışta girişe odaklan (DOM yan etkisi — effect'te kalır).
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(t);
   }, [open]);
 
   const search = useCallback(async () => {

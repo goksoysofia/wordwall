@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playCorrectSound, playWrongSound } from "@/lib/sounds";
-import type { GameStats, WrongItem } from "@/types/game";
+import { useGameStats } from "@/hooks/useGameStats";
+import type { GameStats } from "@/types/game";
 import type { QuizAnswer } from "@/types/activity";
 import ThemedBackground from "@/components/ThemedBackground";
 
@@ -79,10 +80,7 @@ export default function Quiz({
   const questions = useMemo(() => parseQuestions(options, title), [options, title]);
   const totalQuestions = questions.length;
 
-  const startTime = useRef(Date.now());
-  const hasCompletedRef = useRef(false);
-  const wrongItemsRef = useRef<WrongItem[]>([]);
-  const scoreRef = useRef({ correct: 0, wrong: 0 });
+  const { recordCorrect, recordWrong, markCompleted, buildStats } = useGameStats();
   // Hangi soruların skoru kaydedildiği — her soru yalnızca bir kez (ilk cevapta) sayılır.
   const scoredRef = useRef<Set<string>>(new Set());
 
@@ -111,11 +109,10 @@ export default function Quiz({
       if (!scoredRef.current.has(currentQ.id)) {
         scoredRef.current.add(currentQ.id);
         if (correct) {
-          scoreRef.current.correct += 1;
+          recordCorrect();
         } else {
-          scoreRef.current.wrong += 1;
           const correctAns = currentQ.answers.find((a) => a.isCorrect);
-          wrongItemsRef.current.push({
+          recordWrong({
             text: currentQ.question,
             correctAnswer: correctAns?.text || "",
             userAnswer: answer?.text || "",
@@ -130,26 +127,16 @@ export default function Quiz({
         setAttempts((a) => a + 1);
       }
     },
-    [answered, transitioning, currentQ, showFeedback]
+    [answered, transitioning, currentQ, showFeedback, recordCorrect, recordWrong]
   );
 
-  // Move to next question or complete the quiz
+  // Sonraki soruya geç veya testi tamamla.
   const advanceToNext = useCallback(() => {
-    if (hasCompletedRef.current) return;
-
     const nextIndex = currentIndex + 1;
     if (nextIndex >= totalQuestions) {
-      // Quiz finished
-      hasCompletedRef.current = true;
-      const stats: GameStats = {
-        totalItems: totalQuestions,
-        correctCount: scoreRef.current.correct,
-        wrongCount: scoreRef.current.wrong,
-        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-        completedAt: new Date().toISOString(),
-        wrongItems: wrongItemsRef.current,
-      };
-      onComplete(stats);
+      // Test tamamlandı — markCompleted() yalnızca ilk çağrıda true döner.
+      if (!markCompleted()) return;
+      onComplete(buildStats({ totalItems: totalQuestions }));
     } else {
       // Transition to next question
       setTransitioning(true);
@@ -162,11 +149,11 @@ export default function Quiz({
         setTransitioning(false);
       }, 400);
     }
-  }, [currentIndex, totalQuestions, onComplete]);
+  }, [currentIndex, totalQuestions, onComplete, markCompleted, buildStats]);
 
-  // Auto-advance after answer
+  // Cevaptan sonra otomatik ilerleme.
   useEffect(() => {
-    if (!answered || hasCompletedRef.current) return;
+    if (!answered) return;
 
     const shouldAdvance = showFeedback
       ? isCorrect || attempts >= 3

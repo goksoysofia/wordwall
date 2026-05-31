@@ -157,7 +157,6 @@ export default function HomePage() {
   };
 
   const loadActivities = useCallback(async () => {
-    setError(null);
     try {
       const res = await authFetch("/api/activities");
       const data = await res.json();
@@ -170,6 +169,9 @@ export default function HomePage() {
         setActivities([]);
         return;
       }
+      // Hatayı yalnızca başarılı yanıt geldikten sonra temizle: effect'in senkron
+      // setState tetiklemesini önler ve önceki hatayı yeniden yüklemede sıfırlar.
+      setError(null);
       setActivities(Array.isArray(data) ? data : []);
     } catch {
       setError("Bağlantı hatası. Lütfen tekrar deneyin.");
@@ -180,7 +182,12 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (user) void loadActivities();
+    if (!user) return;
+    // loadActivities, setState'lerini yalnızca `await` sonrasında yapar (senkron
+    // render zinciri oluşmaz) ve aynı yükleyici "Yeniden Dene"de de kullanılır.
+    // Lint kuralı bu dolaylı-async durumu izleyemediğinden bilinçli susturulur.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadActivities();
   }, [user, loadActivities]);
 
   const copyPlayLink = async (id: string) => {
@@ -265,6 +272,7 @@ export default function HomePage() {
           <div className="animate-fade-in mb-6 flex items-center justify-end gap-3">
             <div className="flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 shadow-sm" style={{ border: "1px solid rgba(45,27,105,0.08)" }}>
               {user.user_metadata?.avatar_url && (
+                // eslint-disable-next-line @next/next/no-img-element -- küçük harici avatar; next/image gereksiz
                 <img src={user.user_metadata.avatar_url} alt="" className="h-7 w-7 rounded-full" />
               )}
               <span className="text-sm font-semibold text-[#2D1B69]">

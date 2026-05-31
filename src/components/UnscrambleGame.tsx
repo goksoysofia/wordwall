@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playCorrectSound, playWrongSound, playCelebrationSound, playFlipSound, playCardOpenSound } from "@/lib/sounds";
 import { speak, isSpeechSupported, primeVoices } from "@/lib/speech";
-import type { GameStats, WrongItem } from "@/types/game";
+import { shuffle, seededRandom } from "@/lib/shuffle";
+import { useGameStats } from "@/hooks/useGameStats";
+import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 interface UnscrambleOption {
@@ -32,15 +34,6 @@ interface Tile {
   ch: string;
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 const up = (s: string) => s.toLocaleUpperCase("tr-TR");
 
 /** Tireli/boşluklu yazı = hece; aksi halde harf harf böl. */
@@ -53,11 +46,7 @@ function splitWord(text: string): string[] {
 }
 
 export default function UnscrambleGame({ options, title, theme, showFeedback = true, onComplete }: UnscrambleGameProps) {
-  const startTime = useRef(Date.now());
-  const hasCompleted = useRef(false);
-  const correctRef = useRef(0);
-  const wrongRef = useRef(0);
-  const wrongItemsRef = useRef<WrongItem[]>([]);
+  const { recordCorrect, recordWrong, markCompleted, buildStats, reset } = useGameStats();
 
   const deck = useMemo(() => options.filter((o) => o.text && o.text.trim()), [options]);
   const total = deck.length;
@@ -70,22 +59,27 @@ export default function UnscrambleGame({ options, title, theme, showFeedback = t
     () => (current ? splitWord(current.text!).map((ch, i) => ({ id: `t-${i}`, ch })) : []),
     [current]
   );
-  const [poolOrder, setPoolOrder] = useState<Tile[]>([]);
+  // Scramble, kelime indeksiyle tohumlanır: aynı kelime için sabit ve reproducible,
+  // yeniden render'da değişmez — bu yüzden state'te tutmaya gerek yoktur.
+  const poolOrder = useMemo(() => shuffle(baseTiles, seededRandom(index + 1)), [baseTiles, index]);
   const [placed, setPlaced] = useState<Tile[]>([]);
   const [shake, setShake] = useState(false);
   const [solvedFlash, setSolvedFlash] = useState(false);
 
+  // Kelime değiştiğinde tahta state'ini render sırasında sıfırla (React'in
+  // "prop/girdi değişince state'i ayarla" kalıbı) — effect'e ve fazladan bir
+  // render turuna gerek kalmaz.
+  const [renderedWordId, setRenderedWordId] = useState(current?.id);
+  if (current && current.id !== renderedWordId) {
+    setRenderedWordId(current.id);
+    setPlaced([]);
+    setShake(false);
+    setSolvedFlash(false);
+  }
+
   useEffect(() => {
     primeVoices();
   }, []);
-
-  // Yeni kelimeye geçildiğinde tahta sıfırla
-  useEffect(() => {
-    setPlaced([]);
-    setPoolOrder(shuffle(baseTiles));
-    setShake(false);
-    setSolvedFlash(false);
-  }, [baseTiles]);
 
   const pool = poolOrder.filter((t) => !placed.some((p) => p.id === t.id));
 
@@ -97,22 +91,14 @@ export default function UnscrambleGame({ options, title, theme, showFeedback = t
 
   const advance = useCallback(() => {
     if (index + 1 >= total) {
-      if (hasCompleted.current) return;
-      hasCompleted.current = true;
+      if (!markCompleted()) return;
       playCelebrationSound();
-      const stats: GameStats = {
-        totalItems: total,
-        correctCount: correctRef.current,
-        wrongCount: wrongRef.current,
-        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-        completedAt: new Date().toISOString(),
-        wrongItems: wrongItemsRef.current,
-      };
+      const stats = buildStats({ totalItems: total });
       setTimeout(() => onComplete(stats), 900);
     } else {
       setIndex((i) => i + 1);
     }
-  }, [index, total, onComplete]);
+  }, [index, total, onComplete, markCompleted, buildStats]);
 
   const placeTile = useCallback((tile: Tile) => {
     playFlipSound();
@@ -128,10 +114,9 @@ export default function UnscrambleGame({ options, title, theme, showFeedback = t
   const handleCheck = useCallback(() => {
     if (!current) return;
     if (!showFeedback) {
-      if (isCorrect) correctRef.current += 1;
+      if (isCorrect) recordCorrect();
       else {
-        wrongRef.current += 1;
-        wrongItemsRef.current.push({ text: current.text!, correctAnswer: current.text!, userAnswer: assembled || "(boş)" });
+        recordWrong({ text: current.text!, correctAnswer: current.text!, userAnswer: assembled || "(boş)" });
       }
       setSolvedFlash(true);
       playCardOpenSound();
@@ -139,27 +124,25 @@ export default function UnscrambleGame({ options, title, theme, showFeedback = t
       return;
     }
     if (isCorrect) {
-      correctRef.current += 1;
+      recordCorrect();
       setSolvedFlash(true);
       playCorrectSound();
       speak(current.text!);
       setTimeout(advance, 1000);
     } else {
-      wrongRef.current += 1;
-      wrongItemsRef.current.push({ text: current.text!, correctAnswer: current.text!, userAnswer: assembled || "(boş)" });
+      recordWrong({ text: current.text!, correctAnswer: current.text!, userAnswer: assembled || "(boş)" });
       playWrongSound();
       setShake(true);
       setTimeout(() => setShake(false), 500);
     }
-  }, [current, showFeedback, isCorrect, assembled, advance]);
+  }, [current, showFeedback, isCorrect, assembled, advance, recordCorrect, recordWrong]);
 
   const resetGame = () => {
     setIndex(0);
-    hasCompleted.current = false;
-    correctRef.current = 0;
-    wrongRef.current = 0;
-    wrongItemsRef.current = [];
-    startTime.current = Date.now();
+    setPlaced([]);
+    setShake(false);
+    setSolvedFlash(false);
+    reset();
   };
 
   if (!current) return null;

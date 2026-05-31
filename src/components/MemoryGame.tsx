@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { playFlipSound, playMatchSound, playWrongSound } from "@/lib/sounds";
+import { shuffle } from "@/lib/shuffle";
+import { useGameStats } from "@/hooks/useGameStats";
 import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
@@ -26,19 +28,9 @@ interface MemoryCard {
   imageUrl?: string;
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 export default function MemoryGame({ options, theme, onComplete }: MemoryGameProps) {
-  const startTime = useRef(Date.now());
+  const { markCompleted, buildStats, reset } = useGameStats();
   const lockRef = useRef(false);
-  const hasCompleted = useRef(false);
   const cards = useMemo(() => {
     const pairs: MemoryCard[] = [];
     options.forEach((o) => {
@@ -104,27 +96,23 @@ export default function MemoryGame({ options, theme, onComplete }: MemoryGamePro
   );
 
   useEffect(() => {
-    if (matched.size === options.length && options.length > 0 && !hasCompleted.current) {
-      hasCompleted.current = true;
-      const stats: GameStats = {
+    if (matched.size === options.length && options.length > 0 && markCompleted()) {
+      const stats = buildStats({
         totalItems: options.length,
         correctCount: matched.size,
         wrongCount: moves - matched.size,
-        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-        completedAt: new Date().toISOString(),
         wrongItems: [],
-      };
+      });
       setTimeout(() => onComplete(stats), 600);
     }
-  }, [matched.size, options.length, onComplete, moves]);
+  }, [matched.size, options.length, onComplete, moves, markCompleted, buildStats]);
 
   const resetGame = () => {
     setFlipped([]);
     setMatched(new Set());
     setChecking(false);
     setMoves(0);
-    startTime.current = Date.now();
-    hasCompleted.current = false;
+    reset();
     lockRef.current = false;
   };
 

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { playTickSound, playWheelStopSound } from "@/lib/sounds";
+import { shuffle } from "@/lib/shuffle";
+import { useGameStats } from "@/hooks/useGameStats";
 import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
@@ -31,15 +33,6 @@ const MIN_FULL_SPINS = 5;
 
 /** Sabit ibre: ekranda sol tarafta (SVG koordinatlarında 180° = 9 yön). */
 const POINTER_ANGLE_DEG = 180;
-
-function shuffle<T>(items: T[]): T[] {
-  const a = [...items];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
 
 function polarDeg(cx: number, cy: number, r: number, deg: number) {
   const rad = (deg * Math.PI) / 180;
@@ -123,11 +116,11 @@ export default function SpinningWheel({
   theme,
   onComplete,
 }: SpinningWheelProps) {
+  const { markCompleted, buildStats, reset } = useGameStats();
+  // İlk render'daki seçenekleri sabitle: totalItems ve "Yeniden Başlat" bundan
+  // beslenir. Etkinlik değişiminde play rotası bileşeni remount ettiği için
+  // anlık görüntü yeniden alınır.
   const initialSnapshot = useRef(initialOptions);
-  const startTime = useRef(Date.now());
-  const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
-  const hasCompletedRef = useRef(false);
   const [remaining, setRemaining] = useState(() => shuffle([...initialOptions]));
   const [rotation, setRotation] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -146,18 +139,17 @@ export default function SpinningWheel({
   const sliceDeg = n > 0 ? 360 / n : 0;
 
   useEffect(() => {
-    if (remaining.length === 0 && !hasCompletedRef.current) {
-      hasCompletedRef.current = true;
-      onCompleteRef.current({
-        totalItems: initialSnapshot.current.length,
-        correctCount: initialSnapshot.current.length,
-        wrongCount: 0,
-        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-        completedAt: new Date().toISOString(),
-        wrongItems: [],
-      });
+    if (remaining.length === 0 && markCompleted()) {
+      onComplete(
+        buildStats({
+          totalItems: initialSnapshot.current.length,
+          correctCount: initialSnapshot.current.length,
+          wrongCount: 0,
+          wrongItems: [],
+        }),
+      );
     }
-  }, [remaining.length]);
+  }, [remaining.length, onComplete, markCompleted, buildStats]);
 
   // Cleanup animation on unmount
   useEffect(() => {
@@ -177,42 +169,49 @@ export default function SpinningWheel({
 
   const animate = useCallback(
     (timestamp: number) => {
-      const elapsed = timestamp - animStartTime.current;
-      const duration = animDuration.current;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = easeOutQuint(progress);
+      // Kare mantığı hoisted bir fonksiyonda: kendini requestAnimationFrame ile
+      // güvenle yeniden zamanlayabilir (useCallback değişkenini kendinden önce
+      // okumaya çalışmadan).
+      function frame(now: number) {
+        const elapsed = now - animStartTime.current;
+        const duration = animDuration.current;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = easeOutQuint(progress);
 
-      const startRot = animStartRotation.current;
-      const targetRot = animTargetRotation.current;
-      const currentRot = startRot + (targetRot - startRot) * eased;
+        const startRot = animStartRotation.current;
+        const targetRot = animTargetRotation.current;
+        const currentRot = startRot + (targetRot - startRot) * eased;
 
-      setRotation(currentRot);
+        setRotation(currentRot);
 
-      // Tick sound on slice boundary crossing (ibre sol tarafta → ibre altındaki dilim)
-      if (n > 0) {
-        const normalizedDeg = ((currentRot % 360) + 360) % 360;
-        const w = ((POINTER_ANGLE_DEG - normalizedDeg) % 360 + 360) % 360;
-        const wShifted = (w + 90 + 360) % 360;
-        const currentSlice = Math.floor(wShifted / sliceDeg) % n;
-        if (currentSlice !== lastSliceIndex.current && lastSliceIndex.current !== -1) {
-          playTickSound();
+        // Dilim sınırı geçilince tık sesi (ibre solda → ibre altındaki dilim).
+        if (n > 0) {
+          const normalizedDeg = ((currentRot % 360) + 360) % 360;
+          const w = ((POINTER_ANGLE_DEG - normalizedDeg) % 360 + 360) % 360;
+          const wShifted = (w + 90 + 360) % 360;
+          const currentSlice = Math.floor(wShifted / sliceDeg) % n;
+          if (currentSlice !== lastSliceIndex.current && lastSliceIndex.current !== -1) {
+            playTickSound();
+          }
+          lastSliceIndex.current = currentSlice;
         }
-        lastSliceIndex.current = currentSlice;
+
+        if (progress < 1) {
+          animRef.current = requestAnimationFrame(frame);
+        } else {
+          // Animasyon tamamlandı.
+          animRef.current = null;
+          playWheelStopSound();
+          setIsSpinning(false);
+          const winner = pendingWinnerRef.current;
+          pendingWinnerRef.current = null;
+          if (winner !== null) setWinnerIndex(winner);
+        }
       }
 
-      if (progress < 1) {
-        animRef.current = requestAnimationFrame(animate);
-      } else {
-        // Animation complete
-        animRef.current = null;
-        playWheelStopSound();
-        setIsSpinning(false);
-        const w = pendingWinnerRef.current;
-        pendingWinnerRef.current = null;
-        if (w !== null) setWinnerIndex(w);
-      }
+      frame(timestamp);
     },
-    [n, sliceDeg]
+    [n, sliceDeg],
   );
 
   const handleSpin = useCallback(() => {
@@ -266,8 +265,8 @@ export default function SpinningWheel({
     setWinnerIndex(null);
     setRotation(0);
     setRemaining(shuffle([...initialSnapshot.current]));
-    hasCompletedRef.current = false;
-  }, []);
+    reset();
+  }, [reset]);
 
   const wheelColors = theme.wheelColors.length > 0 ? theme.wheelColors : ["#FF6B9D", "#FFD93D", "#4D96FF"];
 

@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { playMatchSound, playWrongSound, playCelebrationSound, playTickSound } from "@/lib/sounds";
-import type { GameStats, WrongItem } from "@/types/game";
+import { useGameStats } from "@/hooks/useGameStats";
+import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 interface WSOption {
@@ -102,9 +103,7 @@ function generate(words: string[]): GenResult {
 }
 
 export default function WordSearch({ options, title, theme, onComplete }: WordSearchProps) {
-  const startTime = useRef(Date.now());
-  const hasCompleted = useRef(false);
-  const wrongRef = useRef(0);
+  const { isCompleted, recordWrong, markCompleted, buildStats, reset } = useGameStats();
 
   const words = useMemo(() => {
     const cleaned = options.map((o) => cleanWord(o.text || "")).filter((w) => Array.from(w).length >= 2);
@@ -112,8 +111,11 @@ export default function WordSearch({ options, title, theme, onComplete }: WordSe
     return Array.from(new Set(cleaned));
   }, [options]);
 
-  const [seed, setSeed] = useState(0);
-  const { grid, size } = useMemo(() => generate(words), [words, seed]);
+  // Izgara state'te tutulur: "Yeniden Başlat" yeni bir ızgara üretir; etkinlik
+  // değişiminde play rotası bileşeni remount edip baştan üretir. Böylece sahte
+  // bir "seed" bağımlılığına gerek kalmaz.
+  const [board, setBoard] = useState(() => generate(words));
+  const { grid, size } = board;
 
   const [start, setStart] = useState<[number, number] | null>(null);
   const [found, setFound] = useState<Record<string, string>>({}); // "r,c" -> color
@@ -135,7 +137,7 @@ export default function WordSearch({ options, title, theme, onComplete }: WordSe
 
   const handleCell = useCallback(
     (r: number, c: number) => {
-      if (hasCompleted.current) return;
+      if (isCompleted) return;
       if (!start) {
         playTickSound();
         setStart([r, c]);
@@ -166,41 +168,31 @@ export default function WordSearch({ options, title, theme, onComplete }: WordSe
         setFoundWords((prev) => new Set(prev).add(match));
       } else {
         playWrongSound();
-        wrongRef.current += 1;
+        recordWrong();
         const keys = cells.map(([rr, cc]) => `${rr},${cc}`);
         setWrongCells(keys);
         setTimeout(() => setWrongCells([]), 400);
       }
       setStart(null);
     },
-    [start, grid, words, foundWords, theme.cardColors]
+    [start, grid, words, foundWords, theme.cardColors, isCompleted, recordWrong]
   );
 
   useEffect(() => {
-    if (words.length > 0 && foundWords.size === words.length && !hasCompleted.current) {
-      hasCompleted.current = true;
+    if (words.length > 0 && foundWords.size === words.length && markCompleted()) {
       playCelebrationSound();
-      const stats: GameStats = {
-        totalItems: words.length,
-        correctCount: words.length,
-        wrongCount: wrongRef.current,
-        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-        completedAt: new Date().toISOString(),
-        wrongItems: [] as WrongItem[],
-      };
+      const stats = buildStats({ totalItems: words.length, correctCount: words.length, wrongItems: [] });
       setTimeout(() => onComplete(stats), 800);
     }
-  }, [foundWords, words.length, onComplete]);
+  }, [foundWords, words.length, onComplete, markCompleted, buildStats]);
 
   const resetGame = () => {
     setStart(null);
     setFound({});
     setFoundWords(new Set());
     setWrongCells([]);
-    wrongRef.current = 0;
-    startTime.current = Date.now();
-    hasCompleted.current = false;
-    setSeed((s) => s + 1);
+    setBoard(generate(words));
+    reset();
   };
 
   // hücre font boyutu ızgara boyutuna göre

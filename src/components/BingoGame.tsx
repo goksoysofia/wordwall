@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playMatchSound, playWrongSound, playCelebrationSound } from "@/lib/sounds";
 import { speak, isSpeechSupported, primeVoices } from "@/lib/speech";
-import type { GameStats, WrongItem } from "@/types/game";
+import { shuffle } from "@/lib/shuffle";
+import { useGameStats } from "@/hooks/useGameStats";
+import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 interface BingoOption {
@@ -28,20 +30,8 @@ export interface BingoGameProps {
   onComplete: (stats: GameStats) => void;
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 export default function BingoGame({ options, title, theme, showFeedback = true, onComplete }: BingoGameProps) {
-  const startTime = useRef(Date.now());
-  const hasCompleted = useRef(false);
-  const wrongRef = useRef(0);
-  const wrongItemsRef = useRef<WrongItem[]>([]);
+  const { isCompleted, recordWrong, markCompleted, buildStats, reset } = useGameStats();
 
   const valid = useMemo(() => options.filter((o) => o.text || o.imageUrl), [options]);
   const side = useMemo(() => Math.min(5, Math.max(2, Math.floor(Math.sqrt(valid.length)))), [valid.length]);
@@ -87,8 +77,7 @@ export default function BingoGame({ options, title, theme, showFeedback = true, 
   }, [board, side]);
 
   const finishWin = useCallback(() => {
-    if (hasCompleted.current) return;
-    hasCompleted.current = true;
+    if (!markCompleted()) return;
     setWon(true);
     playCelebrationSound();
     // Tombala bir satır/sütun/çapraz tamamlanınca kazanılır (tüm tahta değil).
@@ -96,20 +85,13 @@ export default function BingoGame({ options, title, theme, showFeedback = true, 
     // hem "toplam" hem "doğru" alarak raporda %100 başarı göster; yanlış dokunuşlar
     // wrongCount'ta ayrıca tutulur.
     const found = daubed.size + 1; // kazandıran son hücre dahil
-    const stats: GameStats = {
-      totalItems: found,
-      correctCount: found,
-      wrongCount: wrongRef.current,
-      timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-      completedAt: new Date().toISOString(),
-      wrongItems: wrongItemsRef.current,
-    };
+    const stats = buildStats({ totalItems: found, correctCount: found });
     setTimeout(() => onComplete(stats), 1400);
-  }, [daubed.size, onComplete]);
+  }, [daubed.size, onComplete, markCompleted, buildStats]);
 
   const handleCell = useCallback(
     (cell: BingoOption) => {
-      if (won || hasCompleted.current || !called) return;
+      if (won || isCompleted || !called) return;
       if (daubed.has(cell.id)) return;
 
       const matches = cell.id === called.id || (cell.text === called.text && cell.imageUrl === called.imageUrl);
@@ -131,8 +113,7 @@ export default function BingoGame({ options, title, theme, showFeedback = true, 
         }
       } else {
         if (showFeedback) playWrongSound();
-        wrongRef.current += 1;
-        wrongItemsRef.current.push({
+        recordWrong({
           text: called.text || "Öğe",
           correctAnswer: called.text || "Çağrılan öğe",
           userAnswer: cell.text || "Yanlış hücre",
@@ -141,7 +122,7 @@ export default function BingoGame({ options, title, theme, showFeedback = true, 
         setTimeout(() => setWrongId(null), 500);
       }
     },
-    [won, called, daubed, showFeedback, checkWin, finishWin, callQueue]
+    [won, isCompleted, called, daubed, showFeedback, checkWin, finishWin, callQueue, recordWrong]
   );
 
   const resetGame = () => {
@@ -149,10 +130,7 @@ export default function BingoGame({ options, title, theme, showFeedback = true, 
     setDaubed(new Set());
     setWon(false);
     setWrongId(null);
-    wrongRef.current = 0;
-    wrongItemsRef.current = [];
-    startTime.current = Date.now();
-    hasCompleted.current = false;
+    reset();
   };
 
   const cellFont = side >= 4 ? "text-xs sm:text-sm" : "text-sm sm:text-base";

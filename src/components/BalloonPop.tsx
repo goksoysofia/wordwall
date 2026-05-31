@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playPopSound, playCorrectSound, playWrongSound, playCardOpenSound, playCelebrationSound } from "@/lib/sounds";
-import type { GameStats, WrongItem } from "@/types/game";
+import { shuffle } from "@/lib/shuffle";
+import { useGameStats } from "@/hooks/useGameStats";
+import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 export interface BalloonPopProps {
@@ -34,33 +36,19 @@ interface BalloonData {
   floatRange: number;
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
+/**
+ * Balon başına sabit, deterministik sözde-rastgele değer [0, 1).
+ * Render sırasında çağrılabilir (saf): float animasyonuna çeşitlilik katar ama
+ * yeniden render'da değişmez, bu yüzden değerleri bir ref'te saklamaya gerek yoktur.
+ */
+function balloonNoise(seed: number): number {
+  const x = Math.sin(seed * 127.1) * 43758.5453;
+  return x - Math.floor(x);
 }
 
 export default function BalloonPop({ options, title, theme, showFeedback = true, displayMode = "pop", onComplete }: BalloonPopProps) {
   const isReadMode = displayMode === "read";
-  const startTime = useRef(Date.now());
-  const hasCompletedRef = useRef(false);
-  const scoreRef = useRef({ correct: 0, wrong: 0 });
-  const wrongItemsRef = useRef<WrongItem[]>([]);
-
-  // Stable random values per option id, stored in a ref so they don't change on re-render
-  const randomsRef = useRef<Map<string, { yOffset: number; floatRange: number }>>(new Map());
-  const getRandoms = (id: string) => {
-    if (!randomsRef.current.has(id)) {
-      randomsRef.current.set(id, {
-        yOffset: Math.random() * 10,
-        floatRange: 8 + Math.random() * 8,
-      });
-    }
-    return randomsRef.current.get(id)!;
-  };
+  const { correctCount, wrongCount, recordCorrect, recordWrong, markCompleted, buildStats, reset } = useGameStats();
 
   // Seçenek sayısına göre balon boyutu — akışkan (clamp) ölçek:
   // telefonda taşmadan küçülür, tablette aşırı küçük kalmadan büyür.
@@ -80,7 +68,6 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
     const rowGap = count <= 4 ? 40 : count <= 6 ? 32 : 28;
     return shuffle(
       options.map((o, i) => {
-        const rng = getRandoms(o.id);
         return {
           id: o.id,
           originalId: o.id,
@@ -90,9 +77,9 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
           color: theme.cardColors[i % theme.cardColors.length],
           // Kenar boşluğu bırak (10–90%) ki balonlar tamamen alan içinde kalsın.
           x: 10 + ((i % cols) + 0.5) * (80 / cols),
-          y: 15 + Math.floor(i / cols) * rowGap + rng.yOffset,
+          y: 15 + Math.floor(i / cols) * rowGap + balloonNoise(i + 1) * 10,
           delay: i * 0.15,
-          floatRange: rng.floatRange,
+          floatRange: 8 + balloonNoise(i + 100) * 8,
         };
       })
     );
@@ -100,10 +87,12 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
 
   const [popped, setPopped] = useState<Set<string>>(new Set());
   const [popEffects, setPopEffects] = useState<{ id: string; x: number; y: number; correct: boolean }[]>([]);
-  const [score, setScore] = useState({ correct: 0, wrong: 0 });
   const [revealedBalloon, setRevealedBalloon] = useState<BalloonData | null>(null);
-  const [showReadComplete, setShowReadComplete] = useState(false);
-  const correctCount = options.filter((o) => o.isCorrect).length;
+  // Hedef: doğru balon sayısı (hook'un kaydettiği correctCount ile karışmaması
+  // için correctTarget adıyla).
+  const correctTarget = options.filter((o) => o.isCorrect).length;
+  // Okuma modu tamamlandı: tüm balonlar patladı ve açık bir modal yok.
+  const readComplete = isReadMode && balloons.length > 0 && popped.size === balloons.length && !revealedBalloon;
 
   const handlePop = useCallback(
     (balloon: BalloonData) => {
@@ -122,21 +111,12 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
       } else {
         if (balloon.isCorrect) {
           if (showFeedback) playCorrectSound();
-          setScore((s) => {
-            const next = { ...s, correct: s.correct + 1 };
-            scoreRef.current = next;
-            return next;
-          });
+          recordCorrect();
         } else {
           if (showFeedback) playWrongSound();
-          setScore((s) => {
-            const next = { ...s, wrong: s.wrong + 1 };
-            scoreRef.current = next;
-            return next;
-          });
-          wrongItemsRef.current.push({
+          recordWrong({
             text: balloon.text || "Balon",
-            userAnswer: "Yanlış balon patlatıldı"
+            userAnswer: "Yanlış balon patlatıldı",
           });
         }
       }
@@ -145,49 +125,33 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
         setPopEffects((prev) => prev.filter((e) => e.id !== balloon.id));
       }, 1000);
     },
-    [popped, isReadMode, showFeedback]
+    [popped, isReadMode, showFeedback, recordCorrect, recordWrong]
   );
 
   useEffect(() => {
     if (isReadMode) {
-      if (popped.size === balloons.length && !revealedBalloon && !hasCompletedRef.current) {
-        hasCompletedRef.current = true;
+      // Okuma modu onComplete çağırmaz; yalnızca tek seferlik kutlama sesini çalar.
+      if (readComplete && markCompleted()) {
         playCelebrationSound();
-        setShowReadComplete(true);
       }
     } else {
       // Normalde tüm doğru balonlar patlatılınca biter. Hiç doğru balon yoksa
       // (bozuk/eksik veri) tüm balonlar patlatıldığında yine de tamamla — kilitlenmeyi önler.
       const allPopped = balloons.length > 0 && popped.size >= balloons.length;
-      const correctDone = correctCount > 0 && score.correct >= correctCount;
-      if ((correctDone || allPopped) && !hasCompletedRef.current) {
-        hasCompletedRef.current = true;
+      const correctDone = correctTarget > 0 && correctCount >= correctTarget;
+      if ((correctDone || allPopped) && markCompleted()) {
         setTimeout(() => {
-          const s = scoreRef.current;
-          const stats: GameStats = {
-            totalItems: options.length,
-            correctCount: s.correct,
-            wrongCount: s.wrong,
-            timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-            completedAt: new Date().toISOString(),
-            wrongItems: wrongItemsRef.current,
-          };
-          onComplete(stats);
+          onComplete(buildStats({ totalItems: options.length }));
         }, 800);
       }
     }
-  }, [score.correct, correctCount, onComplete, options.length, isReadMode, popped.size, balloons.length, revealedBalloon]);
+  }, [readComplete, correctTarget, correctCount, onComplete, options.length, isReadMode, popped.size, balloons.length, markCompleted, buildStats]);
 
   const resetGame = () => {
     setPopped(new Set());
     setPopEffects([]);
-    setScore({ correct: 0, wrong: 0 });
-    scoreRef.current = { correct: 0, wrong: 0 };
-    wrongItemsRef.current = [];
-    hasCompletedRef.current = false;
-    startTime.current = Date.now();
+    reset();
     setRevealedBalloon(null);
-    setShowReadComplete(false);
   };
 
   return (
@@ -200,10 +164,10 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
           <span className="font-heading text-lg font-bold text-[#2D1B69]">{popped.size}</span>
           <span className="text-xs font-bold text-[#8B7BAD]">/ {options.length}</span>
         </div>
-        {!isReadMode && showFeedback && score.wrong > 0 && (
+        {!isReadMode && showFeedback && wrongCount > 0 && (
           <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
             <span className="text-lg">💨</span>
-            <span className="font-heading text-lg font-bold text-rose-500">{score.wrong}</span>
+            <span className="font-heading text-lg font-bold text-rose-500">{wrongCount}</span>
           </div>
         )}
       </div>
@@ -350,7 +314,7 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
         </AnimatePresence>
 
         {/* Read mode confetti */}
-        {isReadMode && showReadComplete && (
+        {isReadMode && readComplete && (
           <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
             {theme.decorEmojis.slice(0, 6).map((emoji, i) => (
               <motion.div
@@ -380,7 +344,7 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
         {/* All popped — completion */}
         {isReadMode ? (
           // Read mode: celebration with replay button
-          showReadComplete && (
+          readComplete && (
             <motion.div
               className="absolute inset-0 z-30 flex items-center justify-center"
               initial={{ opacity: 0 }}
@@ -420,13 +384,13 @@ export default function BalloonPop({ options, title, theme, showFeedback = true,
               animate={{ opacity: 1 }}
             >
               <div className="rounded-3xl bg-white/90 px-8 py-6 text-center shadow-xl backdrop-blur-sm">
-                <div className="mb-2 text-4xl">{!showFeedback || score.wrong === 0 ? "🏆" : "🎈"}</div>
+                <div className="mb-2 text-4xl">{!showFeedback || wrongCount === 0 ? "🏆" : "🎈"}</div>
                 <p className="font-heading text-lg font-bold text-[#2D1B69]">
-                  {!showFeedback ? "Tebrikler!" : score.wrong === 0 ? "Mükemmel!" : "Tamamlandı!"}
+                  {!showFeedback ? "Tebrikler!" : wrongCount === 0 ? "Mükemmel!" : "Tamamlandı!"}
                 </p>
                 {showFeedback && (
                   <p className="text-sm font-bold text-[#8B7BAD]">
-                    {score.correct} doğru, {score.wrong} yanlış
+                    {correctCount} doğru, {wrongCount} yanlış
                   </p>
                 )}
               </div>

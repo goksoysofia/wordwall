@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Commands
 
@@ -9,7 +9,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `npm run dev` | Dev server (Turbopack) |
 | `npm run build` | Production build |
 | `npm run lint` | Next.js linting |
-| `npm test` | Run Vitest suite once (`npm run test:watch` for watch mode) |
 
 ## Tech Stack
 
@@ -34,26 +33,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `SequenceGame` (sequence), `SentenceGame` (sentence), `UnscrambleGame` (unscramble), `OddOneOut` (odd-one-out), `TrueFalse` (true-false), `ListenChoose` (listen-choose), `WordSearch` (word-search), `Flashcards` (flashcards), `BingoGame` (bingo), `SyllableCount` (syllable-count)
 
 All games track `GameStats` (totalItems, correctCount, wrongCount, timeSeconds) and pass results to `ResultsScreen`.
-
-**Shared game primitives (use these — don't re-implement per component):**
-- `useGameStats()` (`src/hooks/useGameStats.ts`) — owns the per-game bookkeeping every
-  activity needs: a mount-started timer, correct/wrong tallies (exposed as reactive
-  state for live scores), the wrong-item report list, a one-shot completion latch
-  (`markCompleted()` / `isCompleted`), and `buildStats({ totalItems, ... })` which
-  assembles the final `GameStats`. Counters mirror into refs so `buildStats` reads the
-  latest values from `setTimeout`/async callbacks. Override `correctCount`/`wrongCount`/
-  `wrongItems` in `buildStats` for non-standard scoring (e.g. Memory, Bingo).
-- `shuffle(arr, rng?)` and `seededRandom(seed)` (`src/lib/shuffle.ts`) — pure Fisher–Yates
-  with an injectable RNG; `seededRandom` gives a reproducible scramble that survives
-  re-renders without being stored in state. Both are unit-tested.
-
-**React purity conventions (lint-enforced, zero warnings):**
-- Never start a timer or call `Math.random()`/`Date.now()` during render — use the hook's
-  timer, `seededRandom`, or a deterministic helper.
-- Game state resets on a *new activity* via key-based remount: `/play/[id]` renders the
-  game inside `<Fragment key={`${activity.id}-${playCount}`}>`. Reset on a *new
-  question/word within an activity* uses the "adjust state during render" pattern
-  (compare a stored id to the current id), not a `setState`-in-effect.
 
 ### Shared Utilities (`src/lib/`)
 - `supabase.ts` — Browser client (anon key) singleton; used for auth only (DB access goes through API routes)

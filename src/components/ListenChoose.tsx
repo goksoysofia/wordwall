@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { playCorrectSound, playWrongSound, playCelebrationSound } from "@/lib/sounds";
 import { speak, isSpeechSupported, primeVoices } from "@/lib/speech";
-import type { GameStats, WrongItem } from "@/types/game";
+import { shuffle } from "@/lib/shuffle";
+import { useGameStats } from "@/hooks/useGameStats";
+import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 interface LCOption {
@@ -28,21 +30,8 @@ export interface ListenChooseProps {
   onComplete: (stats: GameStats) => void;
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 export default function ListenChoose({ options, title, theme, showFeedback = true, onComplete }: ListenChooseProps) {
-  const startTime = useRef(Date.now());
-  const hasCompleted = useRef(false);
-  const correctRef = useRef(0);
-  const wrongRef = useRef(0);
-  const wrongItemsRef = useRef<WrongItem[]>([]);
+  const { recordCorrect, recordWrong, markCompleted, buildStats, reset } = useGameStats();
 
   const deck = useMemo(() => options.filter((o) => o.text && o.text.trim()), [options]);
   const rounds = useMemo(() => shuffle(deck), [deck]);
@@ -64,11 +53,18 @@ export default function ListenChoose({ options, title, theme, showFeedback = tru
 
   useEffect(() => { primeVoices(); }, []);
 
-  // Tur başında otomatik seslendir
-  useEffect(() => {
-    if (!target) return;
+  // Tur değiştiğinde seçim/gösterim durumunu render sırasında sıfırla
+  // (React'in "girdi değişince state'i ayarla" kalıbı).
+  const [renderedTargetId, setRenderedTargetId] = useState(target?.id);
+  if (target && target.id !== renderedTargetId) {
+    setRenderedTargetId(target.id);
     setPicked(null);
     setRevealed(false);
+  }
+
+  // Tur başında otomatik seslendir (yan etki — effect'te kalır).
+  useEffect(() => {
+    if (!target) return;
     const t = setTimeout(() => speak(target.text!), 350);
     return () => clearTimeout(t);
   }, [target]);
@@ -80,11 +76,10 @@ export default function ListenChoose({ options, title, theme, showFeedback = tru
       setPicked(choice.id);
 
       if (correct) {
-        correctRef.current += 1;
+        recordCorrect();
         if (showFeedback) playCorrectSound();
       } else {
-        wrongRef.current += 1;
-        wrongItemsRef.current.push({
+        recordWrong({
           text: target.text || "Kelime",
           correctAnswer: target.text || "",
           userAnswer: choice.text || "Seçim",
@@ -95,35 +90,23 @@ export default function ListenChoose({ options, title, theme, showFeedback = tru
       const delay = showFeedback ? 1000 : 450;
       setTimeout(() => {
         if (index + 1 >= total) {
-          if (hasCompleted.current) return;
-          hasCompleted.current = true;
+          if (!markCompleted()) return;
           playCelebrationSound();
-          const stats: GameStats = {
-            totalItems: total,
-            correctCount: correctRef.current,
-            wrongCount: wrongRef.current,
-            timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-            completedAt: new Date().toISOString(),
-            wrongItems: wrongItemsRef.current,
-          };
+          const stats = buildStats({ totalItems: total });
           setTimeout(() => onComplete(stats), 600);
         } else {
           setIndex((i) => i + 1);
         }
       }, delay);
     },
-    [picked, target, showFeedback, index, total, onComplete]
+    [picked, target, showFeedback, index, total, onComplete, recordCorrect, recordWrong, markCompleted, buildStats]
   );
 
   const resetGame = () => {
     setIndex(0);
     setPicked(null);
     setRevealed(false);
-    correctRef.current = 0;
-    wrongRef.current = 0;
-    wrongItemsRef.current = [];
-    startTime.current = Date.now();
-    hasCompleted.current = false;
+    reset();
   };
 
   if (!target) return null;

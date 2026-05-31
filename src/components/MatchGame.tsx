@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playWrongSound, playMatchSound } from "@/lib/sounds";
-import type { GameStats, WrongItem } from "@/types/game";
+import { shuffle } from "@/lib/shuffle";
+import { useGameStats } from "@/hooks/useGameStats";
+import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 export interface MatchGameProps {
@@ -27,15 +29,6 @@ interface MatchItem {
   imageUrl?: string;
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 function buildRightItems(options: MatchGameProps["options"]): MatchItem[] {
   return shuffle(
     options.map((o) => ({
@@ -49,11 +42,8 @@ function buildRightItems(options: MatchGameProps["options"]): MatchItem[] {
 }
 
 export default function MatchGame({ options, theme, showFeedback = true, onComplete }: MatchGameProps) {
-  const startTime = useRef(Date.now());
-  const scoreRef = useRef({ correct: 0, wrong: 0 });
-  const hasCompleted = useRef(false);
+  const { wrongCount, recordCorrect, recordWrong, markCompleted, buildStats, reset } = useGameStats();
   const wrongPairTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const wrongItemsRef = useRef<WrongItem[]>([]);
 
   const leftItems = useMemo<MatchItem[]>(
     () =>
@@ -67,18 +57,12 @@ export default function MatchGame({ options, theme, showFeedback = true, onCompl
     [options]
   );
 
+  // Seçenek değişiminde yeniden kurulum play rotasındaki key-remount ile yapılır.
   const [rightItems, setRightItems] = useState<MatchItem[]>(() => buildRightItems(options));
-
-  // Re-build right items when options change (e.g. new game loaded)
-  useEffect(() => {
-    setRightItems(buildRightItems(options));
-  }, [options]);
-
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
   const [selectedRight, setSelectedRight] = useState<string | null>(null);
   const [matched, setMatched] = useState<Set<string>>(new Set());
   const [wrongPair, setWrongPair] = useState<{ left: string; right: string } | null>(null);
-  const [score, setScore] = useState({ correct: 0, wrong: 0 });
 
   // Clean up wrongPair timeout on unmount
   useEffect(() => {
@@ -98,17 +82,13 @@ export default function MatchGame({ options, theme, showFeedback = true, onCompl
       if (leftItem.originalId === rightItem.originalId) {
         if (showFeedback) playMatchSound();
         setMatched((prev) => new Set(prev).add(leftItem.originalId));
-        scoreRef.current = { ...scoreRef.current, correct: scoreRef.current.correct + 1 };
-        setScore({ ...scoreRef.current });
+        recordCorrect();
         setSelectedLeft(null);
         setSelectedRight(null);
       } else {
         if (showFeedback) playWrongSound();
         setWrongPair({ left: leftId, right: rightId });
-        scoreRef.current = { ...scoreRef.current, wrong: scoreRef.current.wrong + 1 };
-        setScore({ ...scoreRef.current });
-
-        wrongItemsRef.current.push({
+        recordWrong({
           text: leftItem.text || 'Sol Öğe',
           correctAnswer: `Eşi: ${rightItems.find((r) => r.originalId === leftItem.originalId)?.text || 'Bilinmiyor'}`,
           userAnswer: rightItem.text || 'Sağ Öğe',
@@ -122,38 +102,30 @@ export default function MatchGame({ options, theme, showFeedback = true, onCompl
         }, 600);
       }
     },
-    [leftItems, rightItems, showFeedback]
+    [leftItems, rightItems, showFeedback, recordCorrect, recordWrong]
   );
 
   useEffect(() => {
-    if (selectedLeft && selectedRight) {
-      checkMatch(selectedLeft, selectedRight);
-    }
-  }, [selectedLeft, selectedRight, checkMatch]);
-
-  useEffect(() => {
-    if (matched.size === options.length && options.length > 0 && !hasCompleted.current) {
-      hasCompleted.current = true;
-      const stats: GameStats = {
-        totalItems: options.length,
-        correctCount: matched.size,
-        wrongCount: scoreRef.current.wrong,
-        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-        completedAt: new Date().toISOString(),
-        wrongItems: wrongItemsRef.current,
-      };
+    if (matched.size === options.length && options.length > 0 && markCompleted()) {
+      const stats = buildStats({ totalItems: options.length, correctCount: matched.size });
       setTimeout(() => onComplete(stats), 500);
     }
-  }, [matched.size, options.length, onComplete]);
+  }, [matched.size, options.length, onComplete, markCompleted, buildStats]);
 
+  // Eşleştirme kontrolü, ikinci seçim yapıldığı anda doğrudan burada yapılır;
+  // böylece "her iki taraf seçildi" durumunu izleyen bir effect'e gerek kalmaz.
   const handleSelect = (item: MatchItem) => {
     if (matched.has(item.originalId)) return;
     if (wrongPair) return;
 
     if (item.side === "left") {
-      setSelectedLeft(item.id === selectedLeft ? null : item.id);
+      const next = item.id === selectedLeft ? null : item.id;
+      setSelectedLeft(next);
+      if (next && selectedRight) checkMatch(next, selectedRight);
     } else {
-      setSelectedRight(item.id === selectedRight ? null : item.id);
+      const next = item.id === selectedRight ? null : item.id;
+      setSelectedRight(next);
+      if (next && selectedLeft) checkMatch(selectedLeft, next);
     }
   };
 
@@ -182,12 +154,8 @@ export default function MatchGame({ options, theme, showFeedback = true, onCompl
     setSelectedRight(null);
     setMatched(new Set());
     setWrongPair(null);
-    scoreRef.current = { correct: 0, wrong: 0 };
-    setScore({ correct: 0, wrong: 0 });
-    wrongItemsRef.current = [];
     setRightItems(buildRightItems(options));
-    startTime.current = Date.now();
-    hasCompleted.current = false;
+    reset();
   };
 
   return (
@@ -199,10 +167,10 @@ export default function MatchGame({ options, theme, showFeedback = true, onCompl
           <span className="text-lg">🔗</span>
           <span className="font-heading text-lg font-bold text-[#2D1B69]">{matched.size}/{options.length}</span>
         </div>
-        {showFeedback && score.wrong > 0 && (
+        {showFeedback && wrongCount > 0 && (
           <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
             <span className="text-lg">❌</span>
-            <span className="font-heading text-lg font-bold text-rose-500">{score.wrong}</span>
+            <span className="font-heading text-lg font-bold text-rose-500">{wrongCount}</span>
           </div>
         )}
       </div>

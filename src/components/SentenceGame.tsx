@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playCorrectSound, playWrongSound, playCelebrationSound, playFlipSound } from "@/lib/sounds";
-import type { GameStats, WrongItem } from "@/types/game";
+import { shuffle } from "@/lib/shuffle";
+import { useGameStats } from "@/hooks/useGameStats";
+import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 interface SentOption {
@@ -31,20 +33,8 @@ interface Tile {
   distractor: boolean;
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 export default function SentenceGame({ options, title, theme, showFeedback = true, onComplete }: SentenceGameProps) {
-  const startTime = useRef(Date.now());
-  const hasCompleted = useRef(false);
-  const wrongRef = useRef(0);
-  const wrongItemsRef = useRef<WrongItem[]>([]);
+  const { isCompleted, recordWrong, markCompleted, buildStats, reset } = useGameStats();
 
   const targetWords = useMemo(() => title.trim().split(/\s+/).filter(Boolean), [title]);
 
@@ -92,28 +82,19 @@ export default function SentenceGame({ options, title, theme, showFeedback = tru
 
   const complete = useCallback(
     (correct: boolean) => {
-      if (hasCompleted.current) return;
-      hasCompleted.current = true;
+      if (!markCompleted()) return;
       if (!correct) {
-        wrongRef.current += 1;
-        wrongItemsRef.current.push({
+        recordWrong({
           text: title.trim(),
           correctAnswer: targetWords.join(" "),
           userAnswer: stripWords.join(" ") || "(boş)",
         });
       }
       playCelebrationSound();
-      const stats: GameStats = {
-        totalItems: 1,
-        correctCount: correct ? 1 : 0,
-        wrongCount: wrongRef.current,
-        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-        completedAt: new Date().toISOString(),
-        wrongItems: wrongItemsRef.current,
-      };
+      const stats = buildStats({ totalItems: 1, correctCount: correct ? 1 : 0 });
       setTimeout(() => onComplete(stats), 900);
     },
-    [title, targetWords, stripWords, onComplete]
+    [title, targetWords, stripWords, onComplete, markCompleted, recordWrong, buildStats]
   );
 
   const handleCheck = useCallback(() => {
@@ -128,17 +109,14 @@ export default function SentenceGame({ options, title, theme, showFeedback = tru
       complete(true);
     } else {
       playWrongSound();
-      wrongRef.current += 1;
+      recordWrong();
     }
-  }, [showFeedback, isCorrect, complete]);
+  }, [showFeedback, isCorrect, complete, recordWrong]);
 
   const resetGame = () => {
     setStrip([]);
     setChecked(false);
-    hasCompleted.current = false;
-    wrongRef.current = 0;
-    wrongItemsRef.current = [];
-    startTime.current = Date.now();
+    reset();
   };
 
   const tileClass = "rounded-2xl px-4 py-2.5 font-heading text-base font-bold shadow-sm sm:text-lg";
@@ -236,7 +214,7 @@ export default function SentenceGame({ options, title, theme, showFeedback = tru
       )}
 
       {/* Kontrol / Onayla */}
-      {strip.length > 0 && !(hasCompleted.current) && (
+      {strip.length > 0 && !isCompleted && (
         <motion.button
           type="button"
           onClick={handleCheck}

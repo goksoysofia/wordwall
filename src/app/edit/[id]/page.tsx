@@ -86,13 +86,12 @@ export default function EditActivityPage() {
     }
   }, [authLoading, user, router, id]);
 
+  // Geçersiz/boş id render'da ele alınır; effect yalnızca geçerli id'de fetch yapar
+  // (effect içinde senkron setState yok).
+  const activityId = Array.isArray(id) ? (id[0] ?? "") : (id ?? "");
+
   useEffect(() => {
-    if (!id || (Array.isArray(id) && id.length === 0)) {
-      setError("Geçersiz etkinlik bağlantısı.");
-      setLoading(false);
-      return;
-    }
-    const activityId = Array.isArray(id) ? id[0] : id;
+    if (!activityId) return;
     (async () => {
       try {
         const res = await fetch(`/api/activities/${activityId}`);
@@ -166,7 +165,7 @@ export default function EditActivityPage() {
         setLoading(false);
       }
     })();
-  }, [id]);
+  }, [activityId]);
 
   function addOption() {
     const newOpt: OptionRow = { id: uuidv4(), text: "" };
@@ -357,16 +356,16 @@ export default function EditActivityPage() {
   if (authLoading) return <PageLoader />;
   if (!user) return null;
 
-  if (loading) {
+  if (loading && activityId) {
     return <PageLoader label="Yükleniyor..." />;
   }
 
-  if (error) {
+  if (!activityId || error) {
     return (
       <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "linear-gradient(135deg, #FFF8F0, #FFE8F5)" }}>
         <div className="card-playful max-w-sm p-10 text-center">
           <div className="mx-auto mb-4 text-5xl">😕</div>
-          <h1 className="font-heading text-xl font-bold text-[#2D1B69]">{error}</h1>
+          <h1 className="font-heading text-xl font-bold text-[#2D1B69]">{error || "Geçersiz etkinlik bağlantısı."}</h1>
           <Link href="/dashboard" className="btn-candy mt-6 inline-flex items-center gap-2 px-6 py-3 text-sm">
             Ana Sayfaya Dön
           </Link>

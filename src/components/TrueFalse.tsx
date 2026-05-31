@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playCorrectSound, playWrongSound, playCelebrationSound, playCardOpenSound } from "@/lib/sounds";
 import { speak, isSpeechSupported, primeVoices } from "@/lib/speech";
-import type { GameStats, WrongItem } from "@/types/game";
+import { shuffle } from "@/lib/shuffle";
+import { useGameStats } from "@/hooks/useGameStats";
+import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 interface TFOption {
@@ -28,21 +30,8 @@ export interface TrueFalseProps {
   onComplete: (stats: GameStats) => void;
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 export default function TrueFalse({ options, title, theme, showFeedback = true, onComplete }: TrueFalseProps) {
-  const startTime = useRef(Date.now());
-  const hasCompleted = useRef(false);
-  const correctRef = useRef(0);
-  const wrongRef = useRef(0);
-  const wrongItemsRef = useRef<WrongItem[]>([]);
+  const { correctCount, recordCorrect, recordWrong, markCompleted, buildStats, reset } = useGameStats();
 
   const deck = useMemo(() => shuffle(options.filter((o) => o.text || o.imageUrl)), [options]);
   const total = deck.length;
@@ -62,12 +51,11 @@ export default function TrueFalse({ options, title, theme, showFeedback = true, 
       setAnswer(value);
 
       if (userCorrect) {
-        correctRef.current += 1;
+        recordCorrect();
         if (showFeedback) playCorrectSound();
         else playCardOpenSound();
       } else {
-        wrongRef.current += 1;
-        wrongItemsRef.current.push({
+        recordWrong({
           text: current.text || "İfade",
           correctAnswer: truth ? "Doğru" : "Yanlış",
           userAnswer: value ? "Doğru" : "Yanlış",
@@ -79,17 +67,9 @@ export default function TrueFalse({ options, title, theme, showFeedback = true, 
       const delay = showFeedback ? 1100 : 450;
       setTimeout(() => {
         if (index + 1 >= total) {
-          if (hasCompleted.current) return;
-          hasCompleted.current = true;
+          if (!markCompleted()) return;
           playCelebrationSound();
-          const stats: GameStats = {
-            totalItems: total,
-            correctCount: correctRef.current,
-            wrongCount: wrongRef.current,
-            timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-            completedAt: new Date().toISOString(),
-            wrongItems: wrongItemsRef.current,
-          };
+          const stats = buildStats({ totalItems: total });
           setTimeout(() => onComplete(stats), 600);
         } else {
           setIndex((i) => i + 1);
@@ -97,17 +77,13 @@ export default function TrueFalse({ options, title, theme, showFeedback = true, 
         }
       }, delay);
     },
-    [answer, current, showFeedback, index, total, onComplete]
+    [answer, current, showFeedback, index, total, onComplete, recordCorrect, recordWrong, markCompleted, buildStats]
   );
 
   const resetGame = () => {
     setIndex(0);
     setAnswer(null);
-    correctRef.current = 0;
-    wrongRef.current = 0;
-    wrongItemsRef.current = [];
-    startTime.current = Date.now();
-    hasCompleted.current = false;
+    reset();
   };
 
   if (!current) return null;
@@ -129,7 +105,7 @@ export default function TrueFalse({ options, title, theme, showFeedback = true, 
         {showFeedback && (
           <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm" style={{ border: "2px solid rgba(45, 27, 105, 0.06)" }}>
             <span className="text-lg">⭐</span>
-            <span className="font-heading text-lg font-bold text-emerald-500">{correctRef.current}</span>
+            <span className="font-heading text-lg font-bold text-emerald-500">{correctCount}</span>
           </div>
         )}
       </div>

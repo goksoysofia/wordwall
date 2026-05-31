@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { playCardOpenSound, playCelebrationSound, playFlipSound } from "@/lib/sounds";
 import { speak, isSpeechSupported, primeVoices } from "@/lib/speech";
+import { useGameStats } from "@/hooks/useGameStats";
 import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
@@ -28,8 +29,7 @@ export interface FlashcardsProps {
 }
 
 export default function Flashcards({ options, title, theme, onComplete }: FlashcardsProps) {
-  const startTime = useRef(Date.now());
-  const hasCompleted = useRef(false);
+  const { markCompleted, buildStats } = useGameStats();
 
   const total = options.length;
   const [index, setIndex] = useState(0);
@@ -59,19 +59,11 @@ export default function Flashcards({ options, title, theme, onComplete }: Flashc
   }, [index]);
 
   const finish = useCallback(() => {
-    if (hasCompleted.current) return;
-    hasCompleted.current = true;
+    if (!markCompleted()) return;
     playCelebrationSound();
-    const stats: GameStats = {
-      totalItems: total,
-      correctCount: total,
-      wrongCount: 0,
-      timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-      completedAt: new Date().toISOString(),
-      wrongItems: [],
-    };
+    const stats = buildStats({ totalItems: total, correctCount: total, wrongCount: 0, wrongItems: [] });
     setTimeout(() => onComplete(stats), 600);
-  }, [total, onComplete]);
+  }, [total, onComplete, markCompleted, buildStats]);
 
   if (!current) return null;
 

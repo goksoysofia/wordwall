@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { playCorrectSound, playWrongSound } from "@/lib/sounds";
-import type { GameStats, WrongItem } from "@/types/game";
+import { useGameStats } from "@/hooks/useGameStats";
+import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 export interface MissingWordProps {
@@ -21,10 +22,7 @@ export interface MissingWordProps {
 }
 
 export default function MissingWord({ options, title, theme, showFeedback = true, onComplete }: MissingWordProps) {
-  const startTime = useRef(Date.now());
-  const wrongCountRef = useRef(0);
-  const hasCompleted = useRef(false);
-  const wrongItemsRef = useRef<WrongItem[]>([]);
+  const { recordWrong, markCompleted, buildStats, reset } = useGameStats();
   const [selected, setSelected] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
@@ -56,44 +54,32 @@ export default function MissingWord({ options, title, theme, showFeedback = true
       if (showFeedback) playCorrectSound();
     } else {
       if (showFeedback) playWrongSound();
-      wrongCountRef.current += 1;
-
       const selectedOpt = options.find((o) => o.id === selected);
-      wrongItemsRef.current.push({
+      recordWrong({
         text: title,
         correctAnswer: correctOption?.text || '',
         userAnswer: selectedOpt?.text || '',
       });
     }
-  }, [selected, answered, options, showFeedback, title, correctOption?.text]);
+  }, [selected, answered, options, showFeedback, title, correctOption?.text, recordWrong]);
 
   useEffect(() => {
-    if (!answered || hasCompleted.current) return;
+    if (!answered) return;
 
     const shouldComplete = showFeedback ? isCorrect : true;
     if (!shouldComplete) return;
+    if (!markCompleted()) return;
 
-    hasCompleted.current = true;
-    const stats: GameStats = {
-      totalItems: 1,
-      correctCount: isCorrect ? 1 : 0,
-      wrongCount: wrongCountRef.current,
-      timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-      completedAt: new Date().toISOString(),
-      wrongItems: wrongItemsRef.current,
-    };
+    const stats = buildStats({ totalItems: 1, correctCount: isCorrect ? 1 : 0 });
     const t = setTimeout(() => onComplete(stats), 1500);
     return () => clearTimeout(t);
-  }, [answered, isCorrect, onComplete, showFeedback]);
+  }, [answered, isCorrect, onComplete, showFeedback, markCompleted, buildStats]);
 
   const resetGame = () => {
+    reset();
     setSelected(null);
     setAnswered(false);
     setIsCorrect(false);
-    wrongCountRef.current = 0;
-    wrongItemsRef.current = [];
-    startTime.current = Date.now();
-    hasCompleted.current = false;
   };
 
   // Blank styling

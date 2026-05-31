@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { playCardOpenSound } from "@/lib/sounds";
+import { shuffle } from "@/lib/shuffle";
+import { useGameStats } from "@/hooks/useGameStats";
 import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
@@ -21,15 +23,6 @@ export interface CardGridProps {
   onComplete: (stats: GameStats) => void;
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 function restartOrder(ids: string[], wasOpened: Set<string>): string[] {
   const opened = ids.filter((id) => wasOpened.has(id));
   const unopened = ids.filter((id) => !wasOpened.has(id));
@@ -44,41 +37,24 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
   const [openedIds, setOpenedIds] = useState<Set<string>>(() => new Set());
   const [modalCardId, setModalCardId] = useState<string | null>(null);
   const [modalFlipped, setModalFlipped] = useState(false);
-  const completedRef = useRef(false);
-  const startTime = useRef(Date.now());
+  const { markCompleted, buildStats, reset } = useGameStats();
 
-  const idsKey = useMemo(() => initialIds.join(","), [initialIds]);
-
-  useEffect(() => {
-    completedRef.current = false;
-    startTime.current = Date.now();
-    setOpenedIds(new Set());
-    setModalCardId(null);
-    setModalFlipped(false);
-  }, [idsKey]);
-
-  useEffect(() => {
-    setOrderedIds((prev) => {
-      const next = initialIds;
-      if (prev.length === next.length && prev.every((id, i) => id === next[i])) return prev;
-      return [...next];
-    });
-  }, [initialIds]);
-
+  // Tüm kartlar açıldığında etkinlik tamamlanır — her kart "doğru" sayılır.
+  // (Etkinlik/seçenek değişiminde sıfırlama, play rotasındaki key-remount ile
+  // yapılır; burada ayrı bir reset effect'ine gerek yoktur.)
   useEffect(() => {
     if (options.length === 0) return;
-    if (openedIds.size === options.length && !completedRef.current) {
-      completedRef.current = true;
-      onComplete({
-        totalItems: options.length,
-        correctCount: options.length,
-        wrongCount: 0,
-        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-        completedAt: new Date().toISOString(),
-        wrongItems: [],
-      });
+    if (openedIds.size === options.length && markCompleted()) {
+      onComplete(
+        buildStats({
+          totalItems: options.length,
+          correctCount: options.length,
+          wrongCount: 0,
+          wrongItems: [],
+        }),
+      );
     }
-  }, [openedIds.size, options.length, onComplete]);
+  }, [openedIds.size, options.length, onComplete, markCompleted, buildStats]);
 
   const openCard = useCallback((id: string) => {
     if (openedIds.has(id)) return;
@@ -99,13 +75,12 @@ export default function CardGrid({ options, theme, onComplete }: CardGridProps) 
   }, [modalCardId]);
 
   const handleRestart = useCallback(() => {
-    completedRef.current = false;
-    startTime.current = Date.now();
+    reset();
     setOrderedIds((prev) => restartOrder(prev, openedIds));
     setOpenedIds(new Set());
     setModalCardId(null);
     setModalFlipped(false);
-  }, [openedIds]);
+  }, [openedIds, reset]);
 
   const modalOption = modalCardId ? optionMap.get(modalCardId) : undefined;
   const modalIndex = modalCardId ? orderedIds.indexOf(modalCardId) : -1;

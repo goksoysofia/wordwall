@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 
 // `beforeinstallprompt` henüz standart tiplerde yok — minimal tanım.
@@ -40,6 +40,21 @@ function isStandalone(): boolean {
   );
 }
 
+// iOS Safari `beforeinstallprompt` desteklemez; "ana ekrana ekle" ipucunu elle
+// göstermek gerekir. Bu yalnızca istemcide belirlenebilir — useSyncExternalStore
+// ile okunur (sunucu anlık görüntüsü `false`), böylece hidrasyon uyuşmazlığı
+// veya effect içinde setState gerekmez.
+function getIosInstallHint(): boolean {
+  if (!isIOS() || isStandalone()) return false;
+  try {
+    return localStorage.getItem(INSTALL_DISMISS_KEY) !== "1";
+  } catch {
+    return true;
+  }
+}
+
+const subscribeNever = () => () => {};
+
 export default function PWAManager() {
   const pathname = usePathname();
   const [offline, setOffline] = useState(false);
@@ -47,7 +62,11 @@ export default function PWAManager() {
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstall, setShowInstall] = useState(false);
-  const [iosHint, setIosHint] = useState(false);
+  // iOS ipucu istemci-özel platform tespitinden gelir; oturum içinde kapatma
+  // ayrı bir state ile yönetilir.
+  const iosInstallable = useSyncExternalStore(subscribeNever, getIosInstallHint, () => false);
+  const [iosDismissed, setIosDismissed] = useState(false);
+  const iosHint = iosInstallable && !iosDismissed;
   const reconnectTimer = useRef<number | null>(null);
 
   // --- Service worker kaydı + güncelleme tespiti ---------------------------
@@ -141,7 +160,7 @@ export default function PWAManager() {
     const onInstalled = () => {
       setShowInstall(false);
       setInstallEvent(null);
-      setIosHint(false);
+      setIosDismissed(true);
       try {
         localStorage.setItem(INSTALL_DISMISS_KEY, "1");
       } catch {
@@ -149,9 +168,6 @@ export default function PWAManager() {
       }
     };
     window.addEventListener("appinstalled", onInstalled);
-
-    // iOS Safari `beforeinstallprompt` desteklemez → elle yönerge göster.
-    if (isIOS() && !isStandalone()) setIosHint(true);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
@@ -161,7 +177,7 @@ export default function PWAManager() {
 
   const dismissInstall = useCallback(() => {
     setShowInstall(false);
-    setIosHint(false);
+    setIosDismissed(true);
     try {
       localStorage.setItem(INSTALL_DISMISS_KEY, "1");
     } catch {

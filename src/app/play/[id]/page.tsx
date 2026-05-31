@@ -74,17 +74,16 @@ export default function PlayPage() {
   // Ses tercihi (haptik ayrı yönetilir) — terapist sessiz seansta kısabilsin.
   const prefs = usePreferences();
 
+  // Geçersiz/boş id render'da ele alınır; effect yalnızca geçerli id'de fetch yapar
+  // (effect içinde senkron setState yok).
+  const activityId = Array.isArray(id) ? (id[0] ?? "") : (id ?? "");
+
   useEffect(() => {
-    if (!id || (Array.isArray(id) && id.length === 0)) {
-      setError("Geçersiz etkinlik bağlantısı.");
-      setLoading(false);
-      return;
-    }
-    const activityId = Array.isArray(id) ? id[0] : id;
+    if (!activityId) return;
+    const controller = new AbortController();
+    const timeoutMs = 20000;
+    const t = window.setTimeout(() => controller.abort(), timeoutMs);
     (async () => {
-      const controller = new AbortController();
-      const timeoutMs = 20000;
-      const t = window.setTimeout(() => controller.abort(), timeoutMs);
       try {
         const res = await fetch(`/api/activities/${activityId}`, {
           signal: controller.signal,
@@ -109,7 +108,7 @@ export default function PlayPage() {
         setLoading(false);
       }
     })();
-  }, [id]);
+  }, [activityId]);
 
   const handleComplete = useCallback((stats: GameStats) => {
     setGameStats(stats);
@@ -128,7 +127,7 @@ export default function PlayPage() {
         console.error("[notify-completion] Error:", err);
       });
     }
-  }, [activity?.id, playerName]);
+  }, [activity, playerName]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -144,7 +143,7 @@ export default function PlayPage() {
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
-  if (loading) {
+  if (loading && activityId) {
     return (
       <div className="flex min-h-screen items-center justify-center" style={{ background: "linear-gradient(135deg, #FFF8F0, #FFE8F5, #E8F4FD)" }}>
         <div className="flex flex-col items-center gap-5">
@@ -163,13 +162,13 @@ export default function PlayPage() {
     );
   }
 
-  if (error || !activity) {
+  if (!activityId || error || !activity) {
     return (
       <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "linear-gradient(135deg, #FFF8F0, #FFE8F5)" }}>
         <div className="card-playful max-w-md p-8 text-center">
           <div className="mb-4 text-5xl">😕</div>
           <h1 className="font-heading text-xl font-bold text-[#2D1B69] mb-2">
-            {error || "Etkinlik bulunamadı"}
+            {!activityId ? "Geçersiz etkinlik bağlantısı." : error || "Etkinlik bulunamadı"}
           </h1>
           <p className="text-[#8B7BAD] font-semibold mb-6">
             Bu etkinlik silinmiş veya bağlantı hatalı olabilir.
@@ -342,7 +341,11 @@ export default function PlayPage() {
         </div>
       </div>
 
-      <Fragment key={playCount}>
+      {/* key, etkinlik kimliği + tekrar sayacından oluşur: etkinlikler arası
+          yerinde gezinmede (örn. /play/A → /play/B) veya "Tekrar Oyna"da oyun
+          bileşeni remount olup tüm iç durumu doğal olarak sıfırlar. Bu sayede
+          oyunların ayrı "seçenek değişince sıfırla" effect'lerine gerek kalmaz. */}
+      <Fragment key={`${activity.id}-${playCount}`}>
       {activity.type === "wheel" && (
         <SpinningWheel
           options={activity.options}

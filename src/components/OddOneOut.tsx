@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { playCorrectSound, playWrongSound, playCelebrationSound } from "@/lib/sounds";
-import type { GameStats, WrongItem } from "@/types/game";
+import { shuffle } from "@/lib/shuffle";
+import { useGameStats } from "@/hooks/useGameStats";
+import type { GameStats } from "@/types/game";
 import ThemedBackground from "@/components/ThemedBackground";
 
 interface OddOption {
@@ -27,20 +29,8 @@ export interface OddOneOutProps {
   onComplete: (stats: GameStats) => void;
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 export default function OddOneOut({ options, title, theme, showFeedback = true, onComplete }: OddOneOutProps) {
-  const startTime = useRef(Date.now());
-  const hasCompleted = useRef(false);
-  const wrongRef = useRef(0);
-  const wrongItemsRef = useRef<WrongItem[]>([]);
+  const { recordWrong, markCompleted, buildStats, reset } = useGameStats();
 
   const items = useMemo(() => shuffle(options), [options]);
   const oddOption = useMemo(() => options.find((o) => o.isCorrect), [options]);
@@ -51,20 +41,13 @@ export default function OddOneOut({ options, title, theme, showFeedback = true, 
 
   const finish = useCallback(
     (correct: boolean) => {
-      if (hasCompleted.current) return;
-      hasCompleted.current = true;
+      if (!markCompleted()) return;
       playCelebrationSound();
-      const stats: GameStats = {
-        totalItems: 1,
-        correctCount: correct ? 1 : 0,
-        wrongCount: wrongRef.current + (correct ? 0 : 1),
-        timeSeconds: Math.round((Date.now() - startTime.current) / 1000),
-        completedAt: new Date().toISOString(),
-        wrongItems: wrongItemsRef.current,
-      };
+      // Yanlış seçimler recordWrong ile sayıldığından wrongCount hook'tan gelir.
+      const stats = buildStats({ totalItems: 1, correctCount: correct ? 1 : 0 });
       setTimeout(() => onComplete(stats), 900);
     },
-    [onComplete]
+    [onComplete, markCompleted, buildStats]
   );
 
   const handlePick = useCallback(
@@ -76,7 +59,7 @@ export default function OddOneOut({ options, title, theme, showFeedback = true, 
         setPicked(item.id);
         setAnswered(true);
         if (!correct) {
-          wrongItemsRef.current.push({
+          recordWrong({
             text: oddOption?.text || "Farklı öğe",
             correctAnswer: oddOption?.text || "Farklı olan",
             userAnswer: item.text || "Seçim",
@@ -93,8 +76,7 @@ export default function OddOneOut({ options, title, theme, showFeedback = true, 
         finish(true);
       } else {
         playWrongSound();
-        wrongRef.current += 1;
-        wrongItemsRef.current.push({
+        recordWrong({
           text: oddOption?.text || "Farklı öğe",
           correctAnswer: oddOption?.text || "Farklı olan",
           userAnswer: item.text || "Seçim",
@@ -103,17 +85,14 @@ export default function OddOneOut({ options, title, theme, showFeedback = true, 
         setTimeout(() => setWrongPick(null), 600);
       }
     },
-    [answered, showFeedback, oddOption, finish]
+    [answered, showFeedback, oddOption, finish, recordWrong]
   );
 
   const resetGame = () => {
     setWrongPick(null);
     setAnswered(false);
     setPicked(null);
-    wrongRef.current = 0;
-    wrongItemsRef.current = [];
-    startTime.current = Date.now();
-    hasCompleted.current = false;
+    reset();
   };
 
   const cols = items.length <= 4 ? "grid-cols-2" : items.length <= 6 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-3 sm:grid-cols-4";

@@ -1,9 +1,26 @@
 import type { Metadata, Viewport } from "next";
+import { Baloo_2, Nunito } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
-import SWRegister from "./sw-register";
+import PWAManager from "@/components/PWAManager";
+import NativeUX from "@/components/NativeUX";
+import { getSplashLinks } from "@/lib/apple-splash";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://wordwall.app";
+
+// Fontları build sırasında self-host et: render-blocking üçüncü-taraf isteği
+// ortadan kalkar (daha hızlı ilk boya) ve çevrimdışı da çalışır. latin-ext
+// alt kümesi Türkçe karakterler (ğ, ş, İ, ı, ç, ö, ü) için gerekli.
+const fontHeading = Baloo_2({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-heading",
+  display: "swap",
+});
+const fontBody = Nunito({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-body",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -64,21 +81,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800;900&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="tr" className={`${fontHeading.variable} ${fontBody.variable}`}>
       <body className="antialiased">
-        <SWRegister />
+        {/* iOS PWA açılış (splash) ekranları — kurulu uygulamanın cold-launch'ında
+            boş beyaz ekran yerine markalı görsel. React 19 bu <link>'leri otomatik
+            <head>'e taşır. Eşleşmeyen cihaz sessizce mevcut davranışa düşer. */}
+        {getSplashLinks().map((l) => (
+          <link
+            key={`${l.size}-${l.media}`}
+            rel="apple-touch-startup-image"
+            media={l.media}
+            href={`/apple-splash/${l.size}`}
+          />
+        ))}
+        <NativeUX />
+        <PWAManager />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

@@ -10,6 +10,7 @@ import { authFetch } from "@/lib/auth-fetch";
 import ShareTemplateModal from "@/components/ShareTemplateModal";
 import WordBankCreateModal from "@/components/WordBankCreateModal";
 import PageLoader from "@/components/PageLoader";
+import DashboardSkeleton from "@/components/DashboardSkeleton";
 
 function typeLabel(type: Activity["type"]): { icon: string; label: string } {
   switch (type) {
@@ -331,21 +332,8 @@ export default function HomePage() {
           </div>
         </header>
 
-        {/* Loading */}
-        {loading && (
-          <div className="flex flex-col items-center justify-center gap-5 py-24">
-            <div className="relative">
-              <div
-                className="h-16 w-16 animate-spin rounded-full border-[4px] border-[#FFE8F5]"
-                style={{ borderTopColor: "#FF6B9D" }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center text-2xl">
-                🎪
-              </div>
-            </div>
-            <p className="font-heading text-lg font-bold text-[#8B7BAD]">Yükleniyor...</p>
-          </div>
-        )}
+        {/* Loading — kart düzenine uyan iskelet (premium algılanan hız, CLS yok) */}
+        {loading && <DashboardSkeleton />}
 
         {/* Error */}
         {!loading && error && (

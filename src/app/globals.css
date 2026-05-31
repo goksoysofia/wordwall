@@ -20,18 +20,37 @@
 
 html {
   scroll-behavior: smooth;
+  /* Native uygulama hissi: pull-to-refresh ve kenar lastik-bandı kapalı. */
+  overscroll-behavior-y: none;
+  /* iOS'ta yatay döndürmede metnin kendiliğinden büyümesini engelle. */
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background: var(--bg-cream);
   color: var(--text-body);
-  font-family: "Nunito", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body), "Nunito", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
+  /* Uzun basışta iOS bağlam menüsü çıkmasın (görsellerde kaydırma vb.). */
+  -webkit-touch-callout: none;
+  /* Metin seçimi kapalı → uygulama gibi hissettirir (girdilerde aşağıda açılır). */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 h1, h2, h3, h4, h5, h6, .font-heading {
-  font-family: "Baloo 2", "Nunito", cursive;
+  font-family: var(--font-heading), "Baloo 2", var(--font-body), "Nunito", cursive;
+}
+
+/* Yazılabilir alanlarda metin seçimi tekrar serbest. */
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 *,
@@ -39,6 +58,65 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 *::after {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Tıklanabilir/sürüklenebilir öğelerde çift-dokunuş zoom gecikmesini kaldır
+   (parmakla kaydırma ve oyun etkileşimleri daha akıcı olur). */
+button,
+a,
+[role="button"],
+input,
+label,
+summary {
+  touch-action: manipulation;
+}
+
+/* PWAManager toast/banner giriş animasyonu. */
+@keyframes ww-toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ====== NATIVE ROTA GEÇİŞİ ====== */
+/* Her rota değişiminde (template.tsx remount) oynayan ince giriş. `backwards`
+   fill kullanılır; bitince hiçbir transform/opacity kalıntısı kalmaz → içteki
+   position:fixed öğeler bozulmaz. */
+@keyframes ww-route-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ww-route-enter {
+  animation: ww-route-enter 0.34s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* ====== İSKELET (SKELETON) YÜKLEME ====== */
+/* Premium algılanan performans: spinner yerine içeriğin şekline uyan, hafifçe
+   parıldayan yer tutucular. */
+@keyframes ww-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+.skeleton {
+  background-color: rgba(45, 27, 105, 0.07);
+  background-image: linear-gradient(
+    90deg,
+    rgba(45, 27, 105, 0) 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(45, 27, 105, 0) 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: ww-shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+/* Standalone (ana ekrandan açılan) modda kaydırma çubuklarını gizle —
+   tarayıcı kromu olmadan daha temiz, native bir görünüm. */
+@media (display-mode: standalone) {
+  body { scrollbar-width: none; }
+  body::-webkit-scrollbar { display: none; }
 }
 
 /* ====== ANIMATIONS ====== */
@@ -409,4 +487,42 @@ body {
     linear-gradient(rgba(45, 27, 105, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(45, 27, 105, 0.03) 1px, transparent 1px);
   background-size: 32px 32px;
+}
+
+/* ====== HAREKET AZALTMA (ERİŞİLEBİLİRLİK) ====== */
+/* Kullanıcı sistemde "hareketi azalt" derse: rota geçişini ve süsleyici sonsuz
+   döngüleri (ambiyans float/sparkle/wiggle...) sustur. İçerik anında görünür,
+   etkileşim animasyonları (giriş/çıkış) son derece kısalır. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .ww-route-enter {
+    animation: none;
+  }
+
+  .animate-float,
+  .animate-float-slow,
+  .animate-sparkle,
+  .animate-wiggle,
+  .animate-pulse-glow,
+  .deco-blob-1,
+  .deco-blob-2,
+  .deco-star {
+    animation: none !important;
+  }
+
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-scale-in,
+  .animate-bounce-in,
+  .animate-pop {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .skeleton {
+    animation: none !important;
+  }
 }

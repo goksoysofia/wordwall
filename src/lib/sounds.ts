@@ -5,6 +5,7 @@
 // =============================================================
 
 import { hapticCorrect, hapticWrong, hapticLight, hapticMedium, hapticHeavy } from './haptics';
+import { isSoundEnabled } from './preferences';
 
 let ctx: AudioContext | null = null;
 let reverbNode: ConvolverNode | null = null;
@@ -47,6 +48,7 @@ function playNote(opts: {
   reverb?: number; // 0-1 wet mix
   pan?: number; // -1 to 1
 }) {
+  if (!isSoundEnabled()) return;
   const c = getCtx();
   const t = c.currentTime + (opts.delay ?? 0);
   const dur = opts.duration;
@@ -101,6 +103,7 @@ function playNoise(opts: {
   delay?: number;
   pan?: number;
 }) {
+  if (!isSoundEnabled()) return;
   const c = getCtx();
   const t = c.currentTime + (opts.delay ?? 0);
   const dur = opts.duration;
@@ -259,26 +262,28 @@ export function playWrongSound() {
 
 /** Balloon pop — percussive burst with pitch sweep */
 export function playPopSound() {
-  const c = getCtx();
-  const t = c.currentTime;
+  if (isSoundEnabled()) {
+    const c = getCtx();
+    const t = c.currentTime;
 
-  // Pop attack with pitch drop
-  const osc = c.createOscillator();
-  const gain = c.createGain();
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(1200, t);
-  osc.frequency.exponentialRampToValueAtTime(200, t + 0.1);
-  gain.gain.setValueAtTime(0.25, t);
-  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-  osc.connect(gain);
-  gain.connect(c.destination);
-  osc.start(t);
-  osc.stop(t + 0.15);
+    // Pop attack with pitch drop
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1200, t);
+    osc.frequency.exponentialRampToValueAtTime(200, t + 0.1);
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    osc.connect(gain);
+    gain.connect(c.destination);
+    osc.start(t);
+    osc.stop(t + 0.15);
 
-  // Noise burst
-  playNoise({ duration: 0.08, vol: 0.2, filterFreq: 5000, filterType: "highpass" });
-  // Airy release
-  playNoise({ duration: 0.15, vol: 0.06, filterFreq: 2000, filterType: "bandpass", delay: 0.04 });
+    // Noise burst
+    playNoise({ duration: 0.08, vol: 0.2, filterFreq: 5000, filterType: "highpass" });
+    // Airy release
+    playNoise({ duration: 0.15, vol: 0.06, filterFreq: 2000, filterType: "bandpass", delay: 0.04 });
+  }
   void hapticMedium();
 }
 

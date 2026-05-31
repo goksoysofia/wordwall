@@ -71,6 +71,21 @@ summary {
   touch-action: manipulation;
 }
 
+/* ====== DOKUNMA GERİ BİLDİRİMİ (HAPTİK TELAFİSİ) ====== */
+/* iOS 26.5+ ve titreşimsiz cihazlarda dokunsal geri bildirim yok; bu yüzden her
+   dokunuşa anlık görsel "basılma" veririz → native uygulama hissi. Yalnızca
+   dokunmatik cihazlarda (hover yok). Kendi :active stiline sahip .btn-* hariç.
+   Framer Motion öğeleri inline transform kullanıp bu kuralı ezdiğinden çakışma
+   olmaz; bilerek geçiş (transition) eklemiyoruz ki Framer'ın kare-kare
+   animasyonuyla yarışmasın — anlık "snap" zaten daha keskin/native hisseder. */
+@media (hover: none) and (pointer: coarse) {
+  button:not(:disabled):not([class*="btn-"]):active,
+  [role="button"]:not([aria-disabled="true"]):active,
+  summary:active {
+    transform: scale(0.96);
+  }
+}
+
 /* PWAManager toast/banner giriş animasyonu. */
 @keyframes ww-toast-in {
   from { opacity: 0; transform: translateY(12px); }

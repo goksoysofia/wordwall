@@ -5,10 +5,13 @@
 //
 //  • Android / Chrome  → Web Vibration API (navigator.vibrate), desene göre
 //                        farklı tonlar (hafif tık / başarı / hata...).
-//  • iOS 17.4+ Safari & kurulu PWA → navigator.vibrate YOK. Gizli bir
-//    <label><input type="checkbox" switch></label> öğesini "toggle" ederek
-//    sistemin Taptic Engine'ini tetikleriz. Bu, web'de iOS haptiğine ulaşmanın
-//    bilinen tek güvenilir yoludur ve kullanıcı dokunuşu içinde çalışmalıdır.
+//  • iOS 17.4–26.4 Safari & kurulu PWA → navigator.vibrate YOK. Gizli bir
+//    <label><input type="checkbox" switch></label> öğesi oluşturup LABEL'a
+//    (input'a DEĞİL) tıklayarak sistemin Taptic Engine'ini tetikleriz. WebKit
+//    haptiği yalnızca tıklama label üzerinden yayıldığında verir; input.click()
+//    çalışmaz. Bu çağrı kullanıcı dokunuşu (gesture) içinde olmalıdır.
+//  • iOS 26.5+ → Apple bu hileyi kapattı; programatik haptik ARTIK MÜMKÜN DEĞİL
+//    (yalnızca kullanıcının anahtara bizzat dokunması çalışır). Web'de çare yok.
 //  • Desteklenmeyen ortam → sessizce yok sayılır.
 //
 // Tüm çağrılar kullanıcı tercihine (preferences.ts) saygı duyar.
@@ -31,7 +34,6 @@ const PATTERNS: Record<HapticKind, number | number[]> = {
 
 let vibrateSupported: boolean | null = null;
 let iosCapable: boolean | null = null;
-let iosSwitch: HTMLInputElement | null = null;
 
 function supportsVibrate(): boolean {
   if (vibrateSupported !== null) return vibrateSupported;
@@ -50,36 +52,31 @@ function isIOS(): boolean {
   return iosCapable;
 }
 
-// iOS taptic hilesi için gizli switch'i (idempotent) oluştur.
-// Görünür olmalı (display:none haptiği bozar) → ekran-dışı + erişilebilirlikten gizli.
-function ensureIOSSwitch(): HTMLInputElement | null {
-  if (typeof document === "undefined") return null;
-  if (iosSwitch?.isConnected) return iosSwitch;
-
-  const label = document.createElement("label");
-  label.setAttribute("aria-hidden", "true");
-  label.style.cssText =
-    "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;" +
-    "pointer-events:none;overflow:hidden;z-index:-1;";
-
-  const input = document.createElement("input");
-  input.type = "checkbox";
-  // iOS bu attribute'u toggle anahtarı olarak render eder ve dokunsal verir.
-  input.setAttribute("switch", "");
-  input.tabIndex = -1;
-  input.setAttribute("aria-hidden", "true");
-
-  label.appendChild(input);
-  document.body.appendChild(label);
-  iosSwitch = input;
-  return input;
-}
-
+// iOS taptic hilesi: anlık olarak gizli bir <label><input switch></label>
+// oluştur, LABEL'a tıkla, kaldır. Kanıtlanmış yöntem (ios-haptics kütüphanesi):
+//  • input.click() ÇALIŞMAZ — tıklama mutlaka label üzerinden yayılmalı.
+//  • label `display:none` olabilir; bu yöntemde haptiği bozmaz.
+//  • Her çağrıda taze öğe → her zaman aynı yönde (unchecked→checked) toggle,
+//    böylece haptik tutarlı çalar.
 function iosTap(): void {
-  const input = ensureIOSSwitch();
-  if (!input) return;
-  // .click() switch'i toggle eder → iOS hafif bir haptic çalar.
-  input.click();
+  if (typeof document === "undefined") return;
+  try {
+    const label = document.createElement("label");
+    label.setAttribute("aria-hidden", "true");
+    label.style.display = "none";
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    // iOS bu attribute'u toggle anahtarı olarak render eder ve dokunsal verir.
+    input.setAttribute("switch", "");
+
+    label.appendChild(input);
+    (document.body || document.documentElement).appendChild(label);
+    label.click(); // ← input değil, LABEL
+    label.remove();
+  } catch {
+    /* DOM erişilemez / engellendi — sessizce yok say */
+  }
 }
 
 // Düşük seviye tetikleyici.
@@ -97,12 +94,14 @@ function play(kind: HapticKind): void {
 }
 
 /**
- * iOS switch'ini erkenden DOM'a ekle (ilk kullanıcı etkileşiminden önce hazır
- * olsun). Android'de veya SSR'da no-op. NativeUX mount'ta çağrılır.
+ * Özellik tespitini önceden önbelleğe al (ilk dokunuşta gecikme olmasın).
+ * iOS switch'i artık her dokunuşta anlık oluşturulduğundan ön-hazırlık gerekmez;
+ * bu fonksiyon API uyumluluğu için korunuyor. NativeUX mount'ta çağrılır.
  */
 export function primeHaptics(): void {
   if (typeof window === "undefined") return;
-  if (!supportsVibrate() && isIOS()) ensureIOSSwitch();
+  supportsVibrate();
+  isIOS();
 }
 
 // --- Anlamsal API (mevcut çağrı yerleriyle uyumlu) -------------------------
